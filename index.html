@@ -776,6 +776,10 @@ function getCoord(dong,lawd){
 function filtered(){
   return allGrouped.filter(g=>{
     if(g.type!==tradeType) return false;
+    // 압구정 영유 반경 밖 제외
+    const c=getCoord(g.dong,g.lawd);
+    const dist=turf.distance([POIS.A.lng,POIS.A.lat],[c.lng,c.lat],{units:'kilometers'});
+    if(dist>POIS.A.r) return false;
     if(filters.areaMin>0 && g.latestArea<filters.areaMin) return false;
     if(filters.areaMax<Infinity && g.latestArea>filters.areaMax) return false;
     if(filters.priceMin>0 && g.avgPrice<filters.priceMin) return false;
