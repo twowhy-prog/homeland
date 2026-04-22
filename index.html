@@ -267,6 +267,23 @@ transition:transform .3s cubic-bezier(.4,0,.2,1);
 #bottomsheet{display:none}
 }
 
+/* ── FILTER BLOCK ── */
+.filter-block{margin-top:8px}
+.filter-row{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.filter-label{font-size:10px;color:var(--muted);min-width:38px;flex-shrink:0;letter-spacing:.3px}
+.filter-num{background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  border-radius:4px;padding:3px 5px;font-family:'DM Mono',monospace;font-size:11px;
+  width:58px;text-align:right;transition:border-color .15s;-moz-appearance:textfield}
+.filter-num::-webkit-outer-spin-button,.filter-num::-webkit-inner-spin-button{-webkit-appearance:none}
+.filter-num:focus{outline:none;border-color:var(--a)}
+.filter-sep{color:var(--muted2);font-size:10px;flex-shrink:0}
+.filter-unit{font-size:10px;color:var(--muted);flex-shrink:0;min-width:22px}
+.filter-hint{font-size:9px;color:var(--muted2);flex:1;text-align:right;font-family:'DM Mono',monospace}
+.filter-footer{display:flex;justify-content:flex-end;margin-top:4px}
+.filter-reset{background:none;border:none;cursor:pointer;font-size:10px;color:var(--muted2);
+  font-family:'Noto Sans KR',sans-serif;padding:0;transition:color .15s}
+.filter-reset:hover{color:var(--c)}
+
 /* ── APT DETAIL PANEL ── */
 #apt-detail{
   position:fixed;top:60px;right:-360px;width:340px;bottom:0;
@@ -364,10 +381,25 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
         <button class="ftab active" id="tt-buy" onclick="setTT('buy')">매매</button>
         <button class="ftab" id="tt-rent" onclick="setTT('rent')">전세</button>
       </div>
-      <div class="ftabs">
-        <button class="ftab active" id="fa-all" onclick="setFA('all')">전체</button>
-        <button class="ftab" id="fa-59" onclick="setFA('59')">59㎡</button>
-        <button class="ftab" id="fa-84" onclick="setFA('84')">84㎡</button>
+      <div class="filter-block">
+        <div class="filter-row">
+          <span class="filter-label">평형대</span>
+          <input type="number" class="filter-num" id="f-area-min" placeholder="최소" min="0" oninput="setAreaMin(this.value)">
+          <span class="filter-sep">~</span>
+          <input type="number" class="filter-num" id="f-area-max" placeholder="최대" min="0" oninput="setAreaMax(this.value)">
+          <span class="filter-unit">평</span>
+          <span class="filter-hint" id="area-hint"></span>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">가격</span>
+          <input type="number" class="filter-num" id="f-price-min" placeholder="최소" min="0" oninput="setPriceMin(this.value)">
+          <span class="filter-sep">~</span>
+          <input type="number" class="filter-num" id="f-price-max" placeholder="최대" min="0" oninput="setPriceMax(this.value)">
+          <span class="filter-unit">만원</span>
+        </div>
+        <div class="filter-footer">
+          <button class="filter-reset" onclick="resetFilters()">✕ 필터 초기화</button>
+        </div>
       </div>
       <div id="budget-info" style="margin-top:7px;background:rgba(91,196,240,.08);border:1px solid rgba(91,196,240,.25);border-radius:7px;padding:7px 10px;line-height:1.6">
         <span style="color:var(--muted);font-size:10px">매수 가능 상한 (자가매도 + 주담보 2억)</span><br>
@@ -424,10 +456,24 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
         <button class="ftab active" id="tt-buy2" onclick="setTT('buy')">매매</button>
         <button class="ftab" id="tt-rent2" onclick="setTT('rent')">전세</button>
       </div>
-      <div class="ftabs" style="margin-bottom:0">
-        <button class="ftab active" id="fa-all2" onclick="setFA('all')">전체</button>
-        <button class="ftab" id="fa-592" onclick="setFA('59')">59㎡</button>
-        <button class="ftab" id="fa-842" onclick="setFA('84')">84㎡</button>
+      <div class="filter-block">
+        <div class="filter-row">
+          <span class="filter-label">평형대</span>
+          <input type="number" class="filter-num" id="f-area-min2" placeholder="최소" min="0" oninput="setAreaMin(this.value)">
+          <span class="filter-sep">~</span>
+          <input type="number" class="filter-num" id="f-area-max2" placeholder="최대" min="0" oninput="setAreaMax(this.value)">
+          <span class="filter-unit">평</span>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">가격</span>
+          <input type="number" class="filter-num" id="f-price-min2" placeholder="최소" min="0" oninput="setPriceMin(this.value)">
+          <span class="filter-sep">~</span>
+          <input type="number" class="filter-num" id="f-price-max2" placeholder="최대" min="0" oninput="setPriceMax(this.value)">
+          <span class="filter-unit">만원</span>
+        </div>
+        <div class="filter-footer">
+          <button class="filter-reset" onclick="resetFilters()">✕ 필터 초기화</button>
+        </div>
       </div>
     </div>
     <div id="apt-list-m" style="margin-top:8px"></div>
@@ -500,7 +546,9 @@ Object.keys(POIS).forEach(k=>{
 });
 
 let map, circles={}, intersectLayer=null, aptMarkers=[];
-let allGrouped=[], tradeType='buy', areaFilter='all';
+let allGrouped=[], tradeType='buy';
+const PYEONG=3.3058;
+let filters={priceMin:0,priceMax:Infinity,areaMin:0,areaMax:Infinity};
 let currentTab='map', bsExpanded=false;
 let maxBuyBudget = Infinity;
 
@@ -570,11 +618,11 @@ function updateRadius(key,val){
 function updateIntersection(){
   if(intersectLayer){map.removeLayer(intersectLayer);intersectLayer=null;}
   try{
-    const ps = Object.values(POIS).map(p=>turf.circle([p.lng,p.lat],p.r,{steps:64,units:'kilometers'}));
-    let inter = turf.intersect(ps[0],ps[1]);
-    if(!inter){setIntersectText('교집합 없음');return;}
-    inter = turf.intersect(inter,ps[2]);
-    if(!inter){setIntersectText('교집합 없음');return;}
+    // A, B 두 거점만 교집합 (C 왕십리역은 최대범위 표시용으로만 사용)
+    const pA=turf.circle([POIS.A.lng,POIS.A.lat],POIS.A.r,{steps:64,units:'kilometers'});
+    const pB=turf.circle([POIS.B.lng,POIS.B.lat],POIS.B.r,{steps:64,units:'kilometers'});
+    let inter = turf.intersect(pA,pB);
+    if(!inter){setIntersectText('교집합 없음');if(allGrouped.length>0){renderMarkers();renderList();}return;}
     const area = (turf.area(inter)/1e6).toFixed(2);
     setIntersectText(area+' km²');
     const coords = inter.geometry.coordinates[0].map(c=>[c[1],c[0]]);
@@ -583,6 +631,7 @@ function updateIntersection(){
     }).addTo(map);
     document.getElementById('nbhd-tags').innerHTML =
       NBHD.map(n=>`<span class="nbhd-tag">${n}</span>`).join('');
+    if(allGrouped.length>0){renderMarkers();renderList();}
   }catch(e){setIntersectText('계산 오류');}
 }
 function setIntersectText(t){
@@ -727,10 +776,52 @@ function getCoord(dong,lawd){
 function filtered(){
   return allGrouped.filter(g=>{
     if(g.type!==tradeType) return false;
-    if(areaFilter!=='all'){const t=parseInt(areaFilter);if(!(g.latestArea>=t-5&&g.latestArea<=t+5))return false;}
+    if(filters.areaMin>0 && g.latestArea<filters.areaMin) return false;
+    if(filters.areaMax<Infinity && g.latestArea>filters.areaMax) return false;
+    if(filters.priceMin>0 && g.avgPrice<filters.priceMin) return false;
+    if(filters.priceMax<Infinity && g.avgPrice>filters.priceMax) return false;
     if(g.type==='buy' && maxBuyBudget<Infinity && g.avgPrice>maxBuyBudget) return false;
     return true;
   });
+}
+
+const AREA_HINT=v=>v>0?`≈${Math.round(v/PYEONG)}평`:'';
+function setAreaMin(v){
+  filters.areaMin=(parseFloat(v)||0)*PYEONG;
+  syncFilterInputs('f-area-min',v);
+  const h=document.getElementById('area-hint');
+  if(h) h.textContent=filters.areaMin>0?`${Math.round(filters.areaMin)}㎡~`:'';
+  renderMarkers();renderList();
+}
+function setAreaMax(v){
+  const n=parseFloat(v);
+  filters.areaMax=n>0?n*PYEONG:Infinity;
+  syncFilterInputs('f-area-max',v);
+  renderMarkers();renderList();
+}
+function setPriceMin(v){
+  filters.priceMin=parseFloat(v)||0;
+  syncFilterInputs('f-price-min',v);
+  renderMarkers();renderList();
+}
+function setPriceMax(v){
+  const n=parseFloat(v);
+  filters.priceMax=n>0?n:Infinity;
+  syncFilterInputs('f-price-max',v);
+  renderMarkers();renderList();
+}
+function syncFilterInputs(baseId,v){
+  const ids=[baseId,baseId+'2'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el&&el!==document.activeElement)el.value=v;});
+}
+function resetFilters(){
+  filters={priceMin:0,priceMax:Infinity,areaMin:0,areaMax:Infinity};
+  ['f-area-min','f-area-max','f-price-min','f-price-max',
+   'f-area-min2','f-area-max2','f-price-min2','f-price-max2'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const h=document.getElementById('area-hint');if(h)h.textContent='';
+  renderMarkers();renderList();
 }
 
 function renderMarkers(){
@@ -895,15 +986,6 @@ function setTT(t){
   });
   renderMarkers();renderList();
 }
-function setFA(f){
-  areaFilter=f;
-  ['all','59','84'].forEach(x=>{
-    document.getElementById('fa-'+x)?.classList.toggle('active',x===f);
-    document.getElementById('fa-'+x+'2')?.classList.toggle('active',x===f);
-  });
-  renderMarkers();renderList();
-}
-
 // ══════════════════════════════════════════════════════════
 //  FINANCE ENGINE
 // ══════════════════════════════════════════════════════════
