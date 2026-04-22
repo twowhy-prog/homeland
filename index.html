@@ -1211,8 +1211,8 @@ function finInput(k,v){
 async function fetchCrypto(){
   try{
     const[xr,bt]=await Promise.all([
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=krw').then(r=>r.json()),
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=krw').then(r=>r.json())
+      jsonApiFetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=krw'),
+      jsonApiFetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=krw')
     ]);
     fin.xrpPrice=xr.ripple?.krw||2074;
     fin.btcPrice=bt.bitcoin?.krw||113388000;
