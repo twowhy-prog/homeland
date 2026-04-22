@@ -322,6 +322,10 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
         <button class="ftab" id="fa-59" onclick="setFA('59')">59㎡</button>
         <button class="ftab" id="fa-84" onclick="setFA('84')">84㎡</button>
       </div>
+      <div id="budget-info" style="margin-top:7px;background:rgba(91,196,240,.08);border:1px solid rgba(91,196,240,.25);border-radius:7px;padding:7px 10px;line-height:1.6">
+        <span style="color:var(--muted);font-size:10px">매수 가능 상한 (자가매도 + 주담보 2억)</span><br>
+        <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--b)">재무 계산 중...</span>
+      </div>
     </div>
     <div id="apt-list"><div class="load-msg"><div class="spinner"></div>실거래가 조회 중...</div></div>
   </div>
@@ -439,6 +443,7 @@ Object.keys(POIS).forEach(k=>{
 let map, circles={}, intersectLayer=null, aptMarkers=[];
 let allGrouped=[], tradeType='buy', areaFilter='all';
 let currentTab='map', bsExpanded=false;
+let maxBuyBudget = Infinity;
 
 // ══════════════════════════════════════════════════════════
 //  MAP
@@ -450,16 +455,28 @@ function initMap(){
   }).addTo(map);
 
   Object.entries(POIS).forEach(([k,p])=>{
-    const icon = L.divIcon({
-      html:`<div style="width:14px;height:14px;border-radius:50%;background:${p.color};
-            border:3px solid rgba(255,255,255,.35);box-shadow:0 0 10px ${p.color}99"></div>`,
-      iconSize:[14,14],iconAnchor:[7,7],className:''
-    });
+    let icon;
+    if(k==='C'){
+      icon = L.divIcon({
+        html:`<div style="display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:none">
+          <div style="background:${p.color};color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:6px;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.6);letter-spacing:-.3px">🚇 왕십리역 <span style="font-size:9px;opacity:.8;font-weight:400">(최대범위)</span></div>
+          <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid ${p.color}"></div>
+        </div>`,
+        iconSize:[120,42],iconAnchor:[60,42],className:''
+      });
+    } else {
+      icon = L.divIcon({
+        html:`<div style="width:14px;height:14px;border-radius:50%;background:${p.color};
+              border:3px solid rgba(255,255,255,.35);box-shadow:0 0 10px ${p.color}99"></div>`,
+        iconSize:[14,14],iconAnchor:[7,7],className:''
+      });
+    }
     L.marker([p.lat,p.lng],{icon}).addTo(map)
       .bindTooltip(`<b style="font-family:Noto Sans KR">${p.name}</b>`,{direction:'top'});
     circles[k] = L.circle([p.lat,p.lng],{
-      radius:p.r*1000,color:p.color,weight:1.5,opacity:.6,
-      fillColor:p.color,fillOpacity:.05
+      radius:p.r*1000,color:p.color,weight:k==='C'?2:1.5,opacity:k==='C'?.85:.6,
+      fillColor:p.color,fillOpacity:k==='C'?.03:.05,
+      dashArray:k==='C'?'6,4':null
     }).addTo(map);
   });
   updateIntersection();
@@ -643,6 +660,7 @@ function filtered(){
   return allGrouped.filter(g=>{
     if(g.type!==tradeType) return false;
     if(areaFilter!=='all'){const t=parseInt(areaFilter);if(!(g.latestArea>=t-5&&g.latestArea<=t+5))return false;}
+    if(g.type==='buy' && maxBuyBudget<Infinity && g.avgPrice>maxBuyBudget) return false;
     return true;
   });
 }
@@ -799,6 +817,7 @@ function calcFinance(){
 
   // 총 가용 자금
   const totalAvail=netProceeds+cryptoTotal-otherDebt;
+  maxBuyBudget = totalAvail + 20000; // 총가용 + 주담보 2억
 
   // 전세
   const jAgent=Math.round(fin.jeonseDep*0.004);
@@ -885,6 +904,13 @@ function calcFinance(){
 
   // 인풋 현행값 동기화 (처음 렌더 후)
   syncInputs();
+
+  // 예산 정보 표시 업데이트
+  const bi=document.getElementById('budget-info');
+  if(bi) bi.innerHTML=`<span style="color:var(--muted);font-size:10px">매수 가능 상한 (자가매도 + 주담보 2억)</span><br><span style="font-family:\'DM Mono\',monospace;font-size:13px;color:var(--b)">${fmtBig(maxBuyBudget)}</span>`;
+
+  // 재무 변경시 지도 목록 재렌더
+  if(map && allGrouped.length>0){renderMarkers();renderList();}
 }
 
 function syncInputs(){
