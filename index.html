@@ -916,6 +916,28 @@ function closeDetail(){
   document.getElementById('apt-detail').classList.remove('open');
 }
 
+const DONG_BJDONG={
+  // 강남구 (11680)
+  '신사동':'1168010100','논현동':'1168010200','압구정동':'1168010300',
+  '청담동':'1168010400','삼성동':'1168010500','대치동':'1168010600',
+  '역삼동':'1168010700','도곡동':'1168010800','개포동':'1168010900',
+  '일원동':'1168011000','수서동':'1168011100',
+  // 서초구 (11650)
+  '방배동':'1165010100','잠원동':'1165010200','반포동':'1165010300',
+  '서초동':'1165010400','양재동':'1165010600',
+  // 성동구 (11200)
+  '왕십리동':'1120065000','행당동':'1120065200','응봉동':'1120065300',
+  '옥수동':'1120066400',
+  '금호동1가':'1120066000','금호동2가':'1120066100','금호동3가':'1120066200','금호동4가':'1120066300',
+  '성수동1가':'1120067000','성수동2가':'1120067100',
+  // 송파구 (11710)
+  '잠실동':'1171010100','신천동':'1171010200','풍납동':'1171010300',
+  '송파동':'1171010400','석촌동':'1171010500','삼전동':'1171010600',
+  '가락동':'1171010700','문정동':'1171010800','방이동':'1171011000',
+  // 영등포구 (11560)
+  '여의도동':'1156010100','영등포동':'1156010200','당산동':'1156010300',
+};
+
 async function fetchAptBasicInfo(g){
   const sec=document.getElementById('adp-basics');
   if(!sec) return;
@@ -923,7 +945,9 @@ async function fetchAptBasicInfo(g){
   const BASE='https://apis.data.go.kr/1613000/AptBasisInfoServiceV4';
 
   async function tryListApi(){
-    const url=`${BASE}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
+    const bjdong=DONG_BJDONG[g.dong];
+    if(!bjdong) return null;
+    const url=`${BASE}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${bjdong}&numOfRows=1000&pageNo=1`;
     const data=await jsonApiFetch(url).catch(()=>null);
     const raw=data?.response?.body?.items?.item;
     if(!raw) return null;
