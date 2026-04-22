@@ -67,14 +67,14 @@ font-family:‘Noto Sans KR’,sans-serif;transition:all .15s}
 #apt-list{flex:1;overflow-y:auto;padding:4px 0}
 #apt-list::-webkit-scrollbar{width:3px}
 #apt-list::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px}
-.apt-item{padding:8px 14px;border-bottom:1px solid var(–border);cursor:pointer;transition:background .15s}
+.apt-item{padding:14px 16px;border-bottom:1px solid var(–border);cursor:pointer;transition:background .15s;min-height:64px}
 .apt-item:hover{background:var(–surface2)}
-.apt-name{font-weight:500;font-size:12px;margin-bottom:1px}
-.apt-dong{font-size:10px;color:var(–muted);margin-bottom:3px}
+.apt-name{font-weight:500;font-size:14px;margin-bottom:3px}
+.apt-dong{font-size:12px;color:var(–muted);margin-bottom:4px}
 .apt-pr{display:flex;justify-content:space-between;align-items:baseline}
-.apt-price{font-family:‘DM Mono’,monospace;font-size:13px;color:var(–a)}
+.apt-price{font-family:‘DM Mono’,monospace;font-size:15px;color:var(–a)}
 .apt-price.rent{color:var(–green)}
-.apt-date{font-size:10px;color:var(–muted2)}
+.apt-date{font-size:11px;color:var(–muted2)}
 .load-msg{text-align:center;padding:24px 14px;color:var(–muted);font-size:12px}
 .spinner{width:22px;height:22px;border:2px solid var(–border2);border-top-color:var(–a);
 border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
@@ -1245,6 +1245,63 @@ function toggleBS(){
   bsExpanded=!bsExpanded;
   document.getElementById('bottomsheet').classList.toggle('collapsed',!bsExpanded);
 }
+
+// ── 바텀시트 스와이프 ──
+(function(){
+  const bs = ()=>document.getElementById('bottomsheet');
+  let startY=0, startT=0, isDragging=false;
+
+  function onStart(e){
+    const t = e.touches?.[0]||e;
+    startY = t.clientY;
+    startT = Date.now();
+    isDragging = true;
+    const el=bs();
+    el.style.transition='none';
+  }
+  function onMove(e){
+    if(!isDragging) return;
+    const t = e.touches?.[0]||e;
+    const dy = t.clientY - startY;
+    const el=bs();
+    const collapsed = el.classList.contains('collapsed');
+    // 접힌 상태: 위로만 / 펼친 상태: 아래로만
+    if(collapsed && dy<0){
+      el.style.transform=`translateY(calc(100% - 76px + ${dy}px))`;
+    } else if(!collapsed && dy>0){
+      el.style.transform=`translateY(${dy}px)`;
+    }
+  }
+  function onEnd(e){
+    if(!isDragging) return;
+    isDragging=false;
+    const t = e.changedTouches?.[0]||e;
+    const dy = t.clientY - startY;
+    const dt = Date.now() - startT;
+    const el=bs();
+    el.style.transition='';
+    el.style.transform='';
+    // 빠른 스와이프(플릭) 또는 50px 이상 이동
+    const flick = dt < 250;
+    const collapsed = el.classList.contains('collapsed');
+    if(collapsed && (dy < -50 || (flick && dy < -20))){
+      bsExpanded=true; el.classList.remove('collapsed');
+    } else if(!collapsed && (dy > 50 || (flick && dy > 20))){
+      bsExpanded=false; el.classList.add('collapsed');
+    } else {
+      // 원위치
+      el.style.transform='';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const el=bs();
+    if(!el) return;
+    el.addEventListener('touchstart', onStart, {passive:true});
+    el.addEventListener('touchmove',  onMove,  {passive:true});
+    el.addEventListener('touchend',   onEnd);
+  });
+})();
 
 // 초기화
 document.addEventListener('DOMContentLoaded',()=>{
