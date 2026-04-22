@@ -478,11 +478,14 @@ function initMap(){
     }
     L.marker([p.lat,p.lng],{icon}).addTo(map)
       .bindTooltip(`<b style="font-family:Noto Sans KR">${p.name}</b>`,{direction:'top'});
-    circles[k] = L.circle([p.lat,p.lng],{
-      radius:p.r*1000,color:p.color,weight:k==='C'?2:1.5,opacity:k==='C'?.85:.6,
-      fillColor:p.color,fillOpacity:k==='C'?.03:.05,
-      dashArray:k==='C'?'6,4':null
-    }).addTo(map);
+    if(k!=='C'){
+      circles[k] = L.circle([p.lat,p.lng],{
+        radius:p.r*1000,color:p.color,weight:1.5,opacity:.6,
+        fillColor:p.color,fillOpacity:.05
+      }).addTo(map);
+    } else {
+      circles[k] = L.circle([p.lat,p.lng],{radius:p.r*1000,opacity:0,fillOpacity:0});
+    }
   });
   updateIntersection();
 }
