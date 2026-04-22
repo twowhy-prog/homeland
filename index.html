@@ -355,17 +355,17 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
     <div class="sb-section">
       <h3>📍 거점 반경 설정</h3>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
+        <label for="rA"><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
         <input type="range" id="rA" min="1" max="15" step="0.5" value="4" oninput="updateRadius('A',this.value)">
         <span class="radius-val" id="rvA">4.0km</span>
       </div>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--b)"></span>처가 원베일리 (B)</label>
+        <label for="rB"><span class="dot" style="background:var(--b)"></span>처가 원베일리 (B)</label>
         <input type="range" id="rB" min="1" max="15" step="0.5" value="5" oninput="updateRadius('B',this.value)">
         <span class="radius-val" id="rvB">5.0km</span>
       </div>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--c)"></span>왕십리역 한계 (C)</label>
+        <label for="rC"><span class="dot" style="background:var(--c)"></span>왕십리역 한계 (C)</label>
         <input type="range" id="rC" min="1" max="15" step="0.5" value="6" oninput="updateRadius('C',this.value)">
         <span class="radius-val" id="rvC">6.0km</span>
       </div>
@@ -384,17 +384,17 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
       <div class="filter-block">
         <div class="filter-row">
           <span class="filter-label">평형대</span>
-          <input type="number" class="filter-num" id="f-area-min" placeholder="최소" min="0" oninput="setAreaMin(this.value)">
+          <input type="number" class="filter-num" id="f-area-min" placeholder="최소" min="0" aria-label="면적 최소 (평)" oninput="setAreaMin(this.value)">
           <span class="filter-sep">~</span>
-          <input type="number" class="filter-num" id="f-area-max" placeholder="최대" min="0" oninput="setAreaMax(this.value)">
+          <input type="number" class="filter-num" id="f-area-max" placeholder="최대" min="0" aria-label="면적 최대 (평)" oninput="setAreaMax(this.value)">
           <span class="filter-unit">평</span>
           <span class="filter-hint" id="area-hint"></span>
         </div>
         <div class="filter-row">
           <span class="filter-label">가격</span>
-          <input type="number" class="filter-num" id="f-price-min" placeholder="최소" min="0" oninput="setPriceMin(this.value)">
+          <input type="number" class="filter-num" id="f-price-min" placeholder="최소" min="0" aria-label="가격 최소 (만원)" oninput="setPriceMin(this.value)">
           <span class="filter-sep">~</span>
-          <input type="number" class="filter-num" id="f-price-max" placeholder="최대" min="0" oninput="setPriceMax(this.value)">
+          <input type="number" class="filter-num" id="f-price-max" placeholder="최대" min="0" aria-label="가격 최대 (만원)" oninput="setPriceMax(this.value)">
           <span class="filter-unit">만원</span>
         </div>
         <div class="filter-footer">
@@ -432,17 +432,17 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
     <div style="padding-bottom:10px">
       <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;color:var(--muted);margin-bottom:8px">📍 거점 반경</h3>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
+        <label for="rA2"><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
         <input type="range" id="rA2" min="1" max="15" step="0.5" value="4" oninput="updateRadius('A',this.value)">
         <span class="radius-val" id="rvA2">4.0km</span>
       </div>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--b)"></span>원베일리 (B)</label>
+        <label for="rB2"><span class="dot" style="background:var(--b)"></span>원베일리 (B)</label>
         <input type="range" id="rB2" min="1" max="15" step="0.5" value="5" oninput="updateRadius('B',this.value)">
         <span class="radius-val" id="rvB2">5.0km</span>
       </div>
       <div class="radius-row">
-        <label><span class="dot" style="background:var(--c)"></span>왕십리역 (C)</label>
+        <label for="rC2"><span class="dot" style="background:var(--c)"></span>왕십리역 (C)</label>
         <input type="range" id="rC2" min="1" max="15" step="0.5" value="6" oninput="updateRadius('C',this.value)">
         <span class="radius-val" id="rvC2">6.0km</span>
       </div>
@@ -459,16 +459,16 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
       <div class="filter-block">
         <div class="filter-row">
           <span class="filter-label">평형대</span>
-          <input type="number" class="filter-num" id="f-area-min2" placeholder="최소" min="0" oninput="setAreaMin(this.value)">
+          <input type="number" class="filter-num" id="f-area-min2" placeholder="최소" min="0" aria-label="면적 최소 (평)" oninput="setAreaMin(this.value)">
           <span class="filter-sep">~</span>
-          <input type="number" class="filter-num" id="f-area-max2" placeholder="최대" min="0" oninput="setAreaMax(this.value)">
+          <input type="number" class="filter-num" id="f-area-max2" placeholder="최대" min="0" aria-label="면적 최대 (평)" oninput="setAreaMax(this.value)">
           <span class="filter-unit">평</span>
         </div>
         <div class="filter-row">
           <span class="filter-label">가격</span>
-          <input type="number" class="filter-num" id="f-price-min2" placeholder="최소" min="0" oninput="setPriceMin(this.value)">
+          <input type="number" class="filter-num" id="f-price-min2" placeholder="최소" min="0" aria-label="가격 최소 (만원)" oninput="setPriceMin(this.value)">
           <span class="filter-sep">~</span>
-          <input type="number" class="filter-num" id="f-price-max2" placeholder="최대" min="0" oninput="setPriceMax(this.value)">
+          <input type="number" class="filter-num" id="f-price-max2" placeholder="최대" min="0" aria-label="가격 최대 (만원)" oninput="setPriceMax(this.value)">
           <span class="filter-unit">만원</span>
         </div>
         <div class="filter-footer">
@@ -655,26 +655,15 @@ function recentMonths(n){
 const PROXY = 'https://api.allorigins.win/raw?url=';
 
 async function proxyFetch(url){
-  try{
-    const r = await fetch(url);
-    if(r.ok){ const t=await r.text(); if(t&&t.includes('<item>')) return t; }
-  }catch{}
-  const r2 = await fetch(PROXY + encodeURIComponent(url));
-  if(!r2.ok) throw new Error('proxy fail');
-  return r2.text();
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if(!r.ok) throw new Error('proxy fail');
+  return r.text();
 }
 
 async function jsonApiFetch(url){
-  let text;
-  try{
-    const r = await fetch(url);
-    if(r.ok) text = await r.text();
-  }catch{}
-  if(!text){
-    const r2 = await fetch(PROXY + encodeURIComponent(url));
-    if(!r2.ok) throw new Error('proxy fail');
-    text = await r2.text();
-  }
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if(!r.ok) throw new Error('proxy fail');
+  const text = await r.text();
   try{ return JSON.parse(text); }catch{ throw new Error('parse fail'); }
 }
 
@@ -927,6 +916,28 @@ function closeDetail(){
   document.getElementById('apt-detail').classList.remove('open');
 }
 
+const DONG_BJDONG={
+  // 강남구 (11680)
+  '신사동':'1168010100','논현동':'1168010200','압구정동':'1168010300',
+  '청담동':'1168010400','삼성동':'1168010500','대치동':'1168010600',
+  '역삼동':'1168010700','도곡동':'1168010800','개포동':'1168010900',
+  '일원동':'1168011000','수서동':'1168011100',
+  // 서초구 (11650)
+  '방배동':'1165010100','잠원동':'1165010200','반포동':'1165010300',
+  '서초동':'1165010400','양재동':'1165010600',
+  // 성동구 (11200)
+  '왕십리동':'1120065000','행당동':'1120065200','응봉동':'1120065300',
+  '옥수동':'1120066400',
+  '금호동1가':'1120066000','금호동2가':'1120066100','금호동3가':'1120066200','금호동4가':'1120066300',
+  '성수동1가':'1120067000','성수동2가':'1120067100',
+  // 송파구 (11710)
+  '잠실동':'1171010100','신천동':'1171010200','풍납동':'1171010300',
+  '송파동':'1171010400','석촌동':'1171010500','삼전동':'1171010600',
+  '가락동':'1171010700','문정동':'1171010800','방이동':'1171011000',
+  // 영등포구 (11560)
+  '여의도동':'1156010100','영등포동':'1156010200','당산동':'1156010300',
+};
+
 async function fetchAptBasicInfo(g){
   const sec=document.getElementById('adp-basics');
   if(!sec) return;
@@ -934,7 +945,9 @@ async function fetchAptBasicInfo(g){
   const BASE='https://apis.data.go.kr/1613000/AptBasisInfoServiceV4';
 
   async function tryListApi(){
-    const url=`${BASE}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
+    const bjdong=DONG_BJDONG[g.dong];
+    if(!bjdong) return null;
+    const url=`${BASE}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${bjdong}&numOfRows=1000&pageNo=1`;
     const data=await jsonApiFetch(url).catch(()=>null);
     const raw=data?.response?.body?.items?.item;
     if(!raw) return null;
@@ -1379,33 +1392,33 @@ function buildFinance(){
   <div class="fin-card">
     <div class="fh">🏠 현재 집 정보</div>
     <div class="chip chip-a">매도 정보</div>
-    <div class="ir"><label>매도 예정가 (만원)</label>
+    <div class="ir"><label for="f-sellPrice">매도 예정가 (만원)</label>
       <input class="val-in" id="f-sellPrice" value="${fin.sellPrice}" type="number" oninput="finInput('sellPrice',this.value)"></div>
-    <div class="ir"><label>취득가 (만원)</label>
+    <div class="ir"><label for="f-buyPrice">취득가 (만원)</label>
       <input class="val-in" id="f-buyPrice" value="${fin.buyPrice}" type="number" oninput="finInput('buyPrice',this.value)"></div>
-    <div class="ir"><label>취득일 (YYYY-MM)</label>
+    <div class="ir"><label for="f-buyDate">취득일 (YYYY-MM)</label>
       <input class="val-in" id="f-buyDate" value="${fin.buyDate}" oninput="finInput('buyDate',this.value)" placeholder="2020-08" style="width:130px;text-align:right"></div>
     <div class="ir"><label>명의</label><span class="calc-v">부부 공동 (각 50%)</span></div>
     <hr class="div">
     <div class="chip chip-c">부채 현황</div>
-    <div class="ir"><label>주담대 잔액 (만원)</label>
+    <div class="ir"><label for="f-mortgage">주담대 잔액 (만원)</label>
       <input class="val-in" id="f-mortgage" value="${fin.mortgage}" type="number" oninput="finInput('mortgage',this.value)"></div>
-    <div class="ir"><label>테슬라 담보대출 (만원)</label>
+    <div class="ir"><label for="f-tesla">테슬라 담보대출 (만원)</label>
       <input class="val-in" id="f-tesla" value="${fin.tesla}" type="number" oninput="finInput('tesla',this.value)"></div>
-    <div class="ir"><label>내 마이너스통장 (만원)</label>
+    <div class="ir"><label for="f-minus1">내 마이너스통장 (만원)</label>
       <input class="val-in" id="f-minus1" value="${fin.minus1}" type="number" oninput="finInput('minus1',this.value)"></div>
-    <div class="ir"><label>배우자 마이너스통장 (만원)</label>
+    <div class="ir"><label for="f-minus2">배우자 마이너스통장 (만원)</label>
       <input class="val-in" id="f-minus2" value="${fin.minus2}" type="number" oninput="finInput('minus2',this.value)"></div>
     <hr class="div">
     <div class="chip chip-a">매도 부대비용</div>
     <div class="ir"><label>중개수수료 (매도가×0.4%, 자동)</label><span class="calc-v" id="rs-agent-fee2">—</span></div>
-    <div class="ir"><label>세무사 신고 대행료 (만원)</label>
+    <div class="ir"><label for="f-taxAgent">세무사 신고 대행료 (만원)</label>
       <input class="val-in" id="f-taxAgent" value="${fin.taxAgent}" type="number" oninput="finInput('taxAgent',this.value)"></div>
-    <div class="ir"><label>등기 비용 (만원)</label>
+    <div class="ir"><label for="f-regFee">등기 비용 (만원)</label>
       <input class="val-in" id="f-regFee" value="${fin.regFee}" type="number" oninput="finInput('regFee',this.value)"></div>
-    <div class="ir"><label>이사 비용 (만원)</label>
+    <div class="ir"><label for="f-moveFee">이사 비용 (만원)</label>
       <input class="val-in" id="f-moveFee" value="${fin.moveFee}" type="number" oninput="finInput('moveFee',this.value)"></div>
-    <div class="ir"><label>기타 (만원)</label>
+    <div class="ir"><label for="f-etc1">기타 (만원)</label>
       <input class="val-in" id="f-etc1" value="${fin.etc1}" type="number" oninput="finInput('etc1',this.value)"></div>
   </div>
 
@@ -1415,7 +1428,7 @@ function buildFinance(){
     <div class="crypto-row">
       <span class="cr-name">XRP</span>
       <div class="cr-detail">
-        <input class="cr-qty" id="xrp-qty" value="${fin.xrpQty}" type="number" step="1000" oninput="finInput('xrpQty',this.value);set('xrp-qty-disp',fmt(parseFloat(this.value)||0))">
+        <input class="cr-qty" id="xrp-qty" value="${fin.xrpQty}" type="number" step="1000" aria-label="XRP 보유량" oninput="finInput('xrpQty',this.value);set('xrp-qty-disp',fmt(parseFloat(this.value)||0))">
         <span class="cr-unit" id="xrp-unit-p">₩—</span>
         <span class="cr-total" id="av-xrp2">—</span>
       </div>
@@ -1423,7 +1436,7 @@ function buildFinance(){
     <div class="crypto-row">
       <span class="cr-name">BTC</span>
       <div class="cr-detail">
-        <input class="cr-qty" id="btc-qty" value="${fin.btcQty}" type="number" step="0.01" oninput="finInput('btcQty',this.value);set('btc-qty-disp',this.value)">
+        <input class="cr-qty" id="btc-qty" value="${fin.btcQty}" type="number" step="0.01" aria-label="BTC 보유량" oninput="finInput('btcQty',this.value);set('btc-qty-disp',this.value)">
         <span class="cr-unit" id="btc-unit-p">₩—</span>
         <span class="cr-total" id="av-btc2">—</span>
       </div>
@@ -1466,34 +1479,34 @@ function buildFinance(){
   <div class="fin-card">
     <div class="fh">🔑 시나리오 A — 전세</div>
     <div class="sl-row">
-      <label>전세 보증금</label>
+      <label for="sl-jeonse">전세 보증금</label>
       <input type="range" id="sl-jeonse" min="50000" max="200000" step="5000" value="${fin.jeonseDep}"
         oninput="finInput('jeonseDep',this.value)" style="accent-color:var(--b)">
       <span class="sl-val" style="color:var(--b)" id="sl-jeonse-val">—</span>
     </div>
     <div class="ir"><label>중개수수료 (×0.4%, 자동)</label><span class="calc-v" id="sc-j-agent2">—</span></div>
     <div class="ir"><label>전세보증보험료 (×0.128%, 자동)</label><span class="calc-v" id="sc-j-ins2">—</span></div>
-    <div class="ir"><label>수리·인테리어 (만원)</label>
+    <div class="ir"><label for="f-jeonseRepair">수리·인테리어 (만원)</label>
       <input class="val-in" id="f-jeonseRepair" value="${fin.jeonseRepair}" type="number" oninput="finInput('jeonseRepair',this.value)"></div>
-    <div class="ir"><label>기타 (만원)</label>
+    <div class="ir"><label for="f-jeonseEtc">기타 (만원)</label>
       <input class="val-in" id="f-jeonseEtc" value="${fin.jeonseEtc}" type="number" oninput="finInput('jeonseEtc',this.value)"></div>
   </div>
 
   <div class="fin-card">
     <div class="fh">🏡 시나리오 B — 매매</div>
     <div class="sl-row">
-      <label>신규 매매가</label>
+      <label for="sl-maemae">신규 매매가</label>
       <input type="range" id="sl-maemae" min="50000" max="300000" step="5000" value="${fin.newBuy}"
         oninput="finInput('newBuy',this.value)" style="accent-color:var(--a)">
       <span class="sl-val" style="color:var(--a)" id="sl-maemae-val">—</span>
     </div>
     <div class="ir"><label>취득세 (자동 계산)</label><span class="calc-v" id="sc-acq-tax2">—</span></div>
     <div class="ir"><label>중개수수료 (×0.5%, 자동)</label><span class="calc-v" id="sc-buy-agent2">—</span></div>
-    <div class="ir"><label>등기 비용 (만원)</label>
+    <div class="ir"><label for="f-newRegFee">등기 비용 (만원)</label>
       <input class="val-in" id="f-newRegFee" value="${fin.newRegFee}" type="number" oninput="finInput('newRegFee',this.value)"></div>
-    <div class="ir"><label>수리·인테리어 (만원)</label>
+    <div class="ir"><label for="f-newRepair">수리·인테리어 (만원)</label>
       <input class="val-in" id="f-newRepair" value="${fin.newRepair}" type="number" oninput="finInput('newRepair',this.value)"></div>
-    <div class="ir"><label>기타 (만원)</label>
+    <div class="ir"><label for="f-newEtc">기타 (만원)</label>
       <input class="val-in" id="f-newEtc" value="${fin.newEtc}" type="number" oninput="finInput('newEtc',this.value)"></div>
   </div>
 </div>
