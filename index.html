@@ -652,15 +652,13 @@ function recentMonths(n){
   return r;
 }
 
-const PROXY = 'https://corsproxy.io/?';
+const PROXY = 'https://api.allorigins.win/raw?url=';
 
 async function proxyFetch(url){
-  // 1차: 직접 시도
   try{
     const r = await fetch(url);
     if(r.ok){ const t=await r.text(); if(t&&t.includes('<item>')) return t; }
   }catch{}
-  // 2차: allorigins 프록시
   const r2 = await fetch(PROXY + encodeURIComponent(url));
   if(!r2.ok) throw new Error('proxy fail');
   return r2.text();
