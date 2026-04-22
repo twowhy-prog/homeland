@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RELO — 이사 후보지 & 재무 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<style>
+:root{
+  --bg:#0d0f14;--surface:#161922;--surface2:#1e2330;--surface3:#252b3a;
+  --border:#252a36;--border2:#303748;
+  --text:#e8eaf0;--muted:#7a8098;--muted2:#5a607a;
+  --a:#f0c040;--b:#5bc4f0;--c:#e05c7a;--green:#4ade80;
+  --orange:#f97316;--red:#ef4444;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;overflow:hidden}
+
+/* ── HEADER ── */
+#header{
+  height:60px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:12px;
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+}
+#header h1{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--a);
+  letter-spacing:3px;flex:1;white-space:nowrap}
+#header h1 span{color:var(--b);font-size:14px;margin-left:10px;
+  font-family:'Noto Sans KR',sans-serif;font-weight:300;letter-spacing:0}
+.tab-btn{background:none;border:1px solid var(--border2);color:var(--muted);
+  padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;
+  font-family:'Noto Sans KR',sans-serif;transition:all .2s;white-space:nowrap}
+.tab-btn.active{background:var(--a);color:#000;border-color:var(--a);font-weight:700}
+
+/* ── LAYOUT ── */
+#app{position:fixed;top:60px;left:0;right:0;bottom:0;display:flex}
+#sidebar{width:340px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#main{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── SIDEBAR ── */
+.sb-section{border-bottom:1px solid var(--border);padding:12px 14px}
+.sb-section h3{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;
+  color:var(--muted);margin-bottom:10px}
+.radius-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.radius-row label{font-size:11px;min-width:118px;display:flex;align-items:center;gap:5px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.radius-row input[type=range]{flex:1;accent-color:var(--a);height:16px}
+.radius-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--a);min-width:34px;text-align:right}
+.intersect-box{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);
+  border-radius:8px;padding:8px 10px;margin-top:6px}
+.intersect-box .area-num{font-family:'DM Mono',monospace;font-size:18px;color:var(--green)}
+.intersect-box .area-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.nbhd-wrap{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.nbhd-tag{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);
+  border-radius:3px;padding:1px 6px;font-size:10px;color:var(--green)}
+.ftabs{display:flex;gap:3px;margin-bottom:8px}
+.ftab{flex:1;padding:5px;background:var(--surface2);border:1px solid var(--border2);
+  color:var(--muted);border-radius:5px;cursor:pointer;font-size:11px;text-align:center;
+  font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.ftab.active{background:var(--a);color:#000;border-color:var(--a);font-weight:700}
+#apt-list{flex:1;overflow-y:auto;padding:4px 0}
+#apt-list::-webkit-scrollbar{width:3px}
+#apt-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.apt-item{padding:8px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.apt-item:hover{background:var(--surface2)}
+.apt-name{font-weight:500;font-size:12px;margin-bottom:1px}
+.apt-dong{font-size:10px;color:var(--muted);margin-bottom:3px}
+.apt-pr{display:flex;justify-content:space-between;align-items:baseline}
+.apt-price{font-family:'DM Mono',monospace;font-size:13px;color:var(--a)}
+.apt-price.rent{color:var(--green)}
+.apt-date{font-size:10px;color:var(--muted2)}
+.load-msg{text-align:center;padding:24px 14px;color:var(--muted);font-size:12px}
+.spinner{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--a);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-msg{text-align:center;padding:16px 14px;color:var(--c);font-size:11px;line-height:1.6}
+
+/* ── MAP ── */
+#map{flex:1;width:100%}
+
+/* ── FINANCE PANEL ── */
+#finance-panel{
+  position:absolute;inset:0;overflow-y:auto;
+  padding:20px 20px 80px;display:none;
+  background:var(--bg);
+}
+#finance-panel::-webkit-scrollbar{width:5px}
+#finance-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.fgrid{max-width:1120px;margin:0 auto}
+
+/* ── FIN CARDS ── */
+.fin-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.fin-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.fin-card .fh{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;
+  color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px}
+.chip{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;margin-bottom:8px}
+.chip-a{background:rgba(240,192,64,.12);color:var(--a);border:1px solid rgba(240,192,64,.3)}
+.chip-b{background:rgba(91,196,240,.12);color:var(--b);border:1px solid rgba(91,196,240,.3)}
+.chip-c{background:rgba(224,92,122,.12);color:var(--c);border:1px solid rgba(224,92,122,.3)}
+.chip-g{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.ir{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ir label{font-size:11px;color:var(--muted);flex:1;line-height:1.4}
+.val-in{background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+  border-radius:5px;padding:3px 7px;font-family:'DM Mono',monospace;font-size:12px;
+  width:130px;text-align:right;transition:border-color .15s}
+.val-in:focus{outline:none;border-color:var(--a)}
+.calc-v{font-family:'DM Mono',monospace;font-size:12px;color:var(--a);text-align:right;min-width:130px}
+hr.div{border:none;border-top:1px solid var(--border);margin:8px 0}
+.tot-row{display:flex;justify-content:space-between;align-items:baseline;padding-top:6px}
+.tot-row .tl{font-size:12px;color:var(--text);font-weight:500}
+.tot-row .tv{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--a)}
+.tv.red{color:var(--red)}.tv.green{color:var(--green)}.tv.sky{color:var(--b)}
+
+/* 슬라이더 행 */
+.sl-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sl-row label{font-size:11px;color:var(--muted);min-width:72px}
+.sl-row input[type=range]{flex:1;height:16px}
+.sl-val{font-family:'DM Mono',monospace;font-size:12px;min-width:88px;text-align:right;font-weight:500}
+
+/* 크립토 */
+.crypto-status{font-size:10px;color:var(--muted2);margin-bottom:7px}
+.crypto-row{display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;margin-bottom:5px}
+.cr-name{font-weight:600;font-size:12px}
+.cr-detail{display:flex;align-items:center;gap:7px}
+.cr-qty{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:4px;padding:2px 5px;font-family:'DM Mono',monospace;font-size:11px;
+  width:72px;text-align:right}
+.cr-unit{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.cr-total{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--a)}
+
+/* 양도세 */
+.tax-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.tax-box{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:10px}
+.tax-box h5{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+  margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.tax-save{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);
+  border-radius:7px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.tax-save .ts-label{font-size:11px;color:var(--muted)}
+.tax-save .ts-val{font-family:'DM Mono',monospace;font-size:16px;color:var(--green);font-weight:700}
+
+/* 양도세 상세 토글 */
+.toggle-btn{width:100%;background:none;border:1px solid var(--border2);color:var(--muted);
+  border-radius:5px;padding:6px;cursor:pointer;font-size:11px;font-family:'Noto Sans KR',sans-serif;
+  margin-top:8px;transition:all .15s}
+.toggle-btn:hover{border-color:var(--a);color:var(--a)}
+.tax-detail{display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:7px;padding:10px}
+.tax-detail.open{display:block}
+.td-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+.td-row .td-l{color:var(--muted)}
+.td-row .td-v{font-family:'DM Mono',monospace;color:var(--text)}
+
+/* 결과 요약 */
+.result-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:18px;margin-bottom:14px}
+.result-card .rch{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;
+  color:var(--a);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* 매도 정산 블록 */
+.settle-block{background:var(--surface2);border:1px solid var(--border2);
+  border-radius:9px;padding:14px;margin-bottom:12px}
+.settle-block h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+  margin-bottom:10px}
+.settle-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.settle-row .sr-l{font-size:12px;color:var(--muted)}
+.settle-row .sr-v{font-family:'DM Mono',monospace;font-size:13px}
+.settle-row .sr-v.deduct{color:var(--red)}
+.settle-row .sr-v.base{color:var(--text)}
+.settle-divider{border:none;border-top:1px dashed var(--border2);margin:8px 0}
+.settle-total{display:flex;justify-content:space-between;align-items:baseline;
+  padding-top:6px}
+.settle-total .st-l{font-size:13px;font-weight:700}
+.settle-total .st-v{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--green)}
+
+/* 총 가용 자금 */
+.avail-block{background:var(--surface2);border:1px solid var(--border2);
+  border-radius:9px;padding:14px;margin-bottom:12px}
+.avail-block h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+.avail-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.avail-row .ar-l{font-size:12px;color:var(--muted)}
+.avail-row .ar-v{font-family:'DM Mono',monospace;font-size:13px}
+.avail-divider{border:none;border-top:1px dashed var(--border2);margin:8px 0}
+.avail-total{display:flex;justify-content:space-between;align-items:baseline;padding-top:6px}
+.avail-total .at-l{font-size:13px;font-weight:700}
+.avail-total .at-v{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--a)}
+
+/* 시나리오 비교 */
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sc-box{border-radius:9px;padding:14px}
+.sc-box.jeonse{background:rgba(91,196,240,.07);border:1px solid rgba(91,196,240,.25)}
+.sc-box.maemae{background:rgba(240,192,64,.07);border:1px solid rgba(240,192,64,.25)}
+.sc-box h4{font-size:13px;font-weight:700;margin-bottom:10px}
+.sc-box h4.sky{color:var(--b)}.sc-box h4.gold{color:var(--a)}
+.sc-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+.sc-row .scl{color:var(--muted)}
+.sc-row .scv{font-family:'DM Mono',monospace}
+.sc-sep{border:none;border-top:1px solid var(--border);margin:8px 0}
+.sc-result{display:flex;justify-content:space-between;align-items:baseline}
+.sc-result .scrl{font-size:12px;font-weight:700}
+.sc-result .scrv{font-family:'DM Mono',monospace;font-size:16px;font-weight:700}
+
+/* 복사 버튼 */
+.copy-btn{
+  display:flex;align-items:center;gap:6px;margin-top:12px;
+  background:var(--surface2);border:1px solid var(--border2);color:var(--muted);
+  border-radius:7px;padding:8px 14px;cursor:pointer;font-size:12px;
+  font-family:'Noto Sans KR',sans-serif;transition:all .2s;
+}
+.copy-btn:hover{border-color:var(--a);color:var(--a)}
+.copy-btn.copied{border-color:var(--green);color:var(--green)}
+
+/* 면책 문구 */
+.disclaimer{
+  position:fixed;bottom:0;left:0;right:0;z-index:800;
+  background:rgba(13,15,20,.92);border-top:1px solid var(--border);
+  padding:6px 20px;text-align:center;font-size:10px;color:var(--muted2);
+  backdrop-filter:blur(8px);display:none;
+}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  body,html{overflow:hidden}
+  #header{padding:0 12px;gap:8px}
+  #header h1{font-size:20px}
+  #header h1 span{display:none}
+  .tab-btn{display:none}
+  #app{flex-direction:column;bottom:56px}
+  #sidebar{width:100%;height:100%;display:none}
+  #main{height:100%;width:100%}
+  #finance-panel{padding:12px 12px 80px}
+  .fin-row{grid-template-columns:1fr}
+  .tax-grid{grid-template-columns:1fr}
+  .sc-grid{grid-template-columns:1fr}
+  #mobile-tabbar{
+    display:flex;position:fixed;bottom:0;left:0;right:0;height:56px;
+    background:var(--surface);border-top:1px solid var(--border);z-index:1000;
+  }
+  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;background:none;border:none;color:var(--muted);cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif;font-size:10px}
+  .m-tab .mi{font-size:20px}
+  .m-tab.active{color:var(--a)}
+  #bottomsheet{
+    position:fixed;bottom:56px;left:0;right:0;
+    background:var(--surface);border-top:1px solid var(--border2);
+    border-radius:14px 14px 0 0;z-index:900;
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  #bottomsheet.collapsed{transform:translateY(calc(100% - 76px))}
+  .bs-handle{display:flex;justify-content:center;padding:9px;cursor:pointer}
+  .bs-handle::after{content:'';width:32px;height:4px;background:var(--border2);border-radius:2px;display:block}
+  .bs-content{padding:0 12px 12px;overflow-y:auto;max-height:58vh}
+  .disclaimer{bottom:56px}
+}
+@media(min-width:769px){
+  #mobile-tabbar{display:none}
+  #bottomsheet{display:none}
+}
+
+/* 팝업 스타일 */
+.lp-wrap .leaflet-popup-content-wrapper{
+  background:#161922!important;border:1px solid #252a36!important;
+  border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;color:#e8eaf0!important;
+}
+.lp-wrap .leaflet-popup-tip{background:#252a36!important;}
+.lp-wrap .leaflet-popup-content{margin:10px 12px!important;}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>RELO<span>이사 후보지 &amp; 재무 시뮬레이터</span></h1>
+  <button class="tab-btn active" id="btn-map" onclick="switchTab('map')">🗺️ 지도</button>
+  <button class="tab-btn" id="btn-finance" onclick="switchTab('finance')">💰 재무</button>
+</div>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-section">
+      <h3>📍 거점 반경 설정</h3>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
+        <input type="range" id="rA" min="1" max="15" step="0.5" value="4" oninput="updateRadius('A',this.value)">
+        <span class="radius-val" id="rvA">4.0km</span>
+      </div>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--b)"></span>처가 원베일리 (B)</label>
+        <input type="range" id="rB" min="1" max="15" step="0.5" value="5" oninput="updateRadius('B',this.value)">
+        <span class="radius-val" id="rvB">5.0km</span>
+      </div>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--c)"></span>왕십리역 한계 (C)</label>
+        <input type="range" id="rC" min="1" max="15" step="0.5" value="6" oninput="updateRadius('C',this.value)">
+        <span class="radius-val" id="rvC">6.0km</span>
+      </div>
+      <div class="intersect-box">
+        <div class="area-num" id="intersect-area">계산 중...</div>
+        <div class="area-sub">세 거점 교집합 면적</div>
+        <div class="nbhd-wrap" id="nbhd-tags"></div>
+      </div>
+    </div>
+    <div class="sb-section">
+      <h3>🏠 실거래가</h3>
+      <div class="ftabs">
+        <button class="ftab active" id="tt-buy" onclick="setTT('buy')">매매</button>
+        <button class="ftab" id="tt-rent" onclick="setTT('rent')">전세</button>
+      </div>
+      <div class="ftabs">
+        <button class="ftab active" id="fa-all" onclick="setFA('all')">전체</button>
+        <button class="ftab" id="fa-59" onclick="setFA('59')">59㎡</button>
+        <button class="ftab" id="fa-84" onclick="setFA('84')">84㎡</button>
+      </div>
+    </div>
+    <div id="apt-list"><div class="load-msg"><div class="spinner"></div>실거래가 조회 중...</div></div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="map"></div>
+    <div id="finance-panel"></div>
+  </div>
+</div>
+
+<!-- 모바일 탭바 -->
+<div id="mobile-tabbar">
+  <button class="m-tab active" id="m-btn-map" onclick="switchTab('map')"><span class="mi">🗺️</span>지도</button>
+  <button class="m-tab" id="m-btn-finance" onclick="switchTab('finance')"><span class="mi">💰</span>재무</button>
+</div>
+
+<!-- 모바일 바텀시트 -->
+<div id="bottomsheet" class="collapsed">
+  <div class="bs-handle" onclick="toggleBS()"></div>
+  <div class="bs-content">
+    <div style="padding-bottom:10px">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;color:var(--muted);margin-bottom:8px">📍 거점 반경</h3>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--a)"></span>압구정 영유 (A)</label>
+        <input type="range" id="rA2" min="1" max="15" step="0.5" value="4" oninput="updateRadius('A',this.value)">
+        <span class="radius-val" id="rvA2">4.0km</span>
+      </div>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--b)"></span>원베일리 (B)</label>
+        <input type="range" id="rB2" min="1" max="15" step="0.5" value="5" oninput="updateRadius('B',this.value)">
+        <span class="radius-val" id="rvB2">5.0km</span>
+      </div>
+      <div class="radius-row">
+        <label><span class="dot" style="background:var(--c)"></span>왕십리역 (C)</label>
+        <input type="range" id="rC2" min="1" max="15" step="0.5" value="6" oninput="updateRadius('C',this.value)">
+        <span class="radius-val" id="rvC2">6.0km</span>
+      </div>
+      <div class="intersect-box" style="margin-top:6px">
+        <div class="area-num" id="intersect-area2">—</div>
+        <div class="area-sub">교집합 면적</div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px">
+      <div class="ftabs">
+        <button class="ftab active" id="tt-buy2" onclick="setTT('buy')">매매</button>
+        <button class="ftab" id="tt-rent2" onclick="setTT('rent')">전세</button>
+      </div>
+      <div class="ftabs" style="margin-bottom:0">
+        <button class="ftab active" id="fa-all2" onclick="setFA('all')">전체</button>
+        <button class="ftab" id="fa-592" onclick="setFA('59')">59㎡</button>
+        <button class="ftab" id="fa-842" onclick="setFA('84')">84㎡</button>
+      </div>
+    </div>
+    <div id="apt-list-m" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- 면책 문구 -->
+<div class="disclaimer" id="disclaimer">
+  ⚠️ 본 계산은 참고용이며 정확한 세금은 세무사 상담을 권장합니다. 실거래가는 국토부 공공데이터 기준이며 실제와 차이가 있을 수 있습니다.
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+const POIS = {
+  A:{name:'압구정 영유 (리비어)',lat:37.5272,lng:127.0311,color:'#f0c040',r:4},
+  B:{name:'처가 (원베일리)',lat:37.5085,lng:126.9940,color:'#5bc4f0',r:5},
+  C:{name:'왕십리역 (한계)',lat:37.5613,lng:127.0374,color:'#e05c7a',r:6},
+};
+const NBHD = ['잠원동','반포동','서초동','압구정동','논현동','신사동'];
+const SERVICE_KEY = 'kw4kGaaVazDLCC9Yzy6zY9Ze5DS45DpDJc1iiTRNe%2FaoYOv%2BmeJSw4EIVUl7qAOSfWU9yJbchwHH29TWd7ADxA%3D%3D';
+
+// localStorage 복원
+function ls(k,def){ try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch{return def;} }
+function lss(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
+
+let fin = {
+  sellPrice: ls('fin_sellPrice',180000),
+  buyPrice:  ls('fin_buyPrice',98000),
+  buyDate:   ls('fin_buyDate','2020-08'),
+  mortgage:  ls('fin_mortgage',27000),
+  tesla:     ls('fin_tesla',3500),
+  minus1:    ls('fin_minus1',1500),
+  minus2:    ls('fin_minus2',3000),
+  xrpQty:    ls('fin_xrpQty',60000),
+  btcQty:    ls('fin_btcQty',0.8),
+  xrpPrice:  2074,
+  btcPrice:  113388000,
+  taxAgent:  ls('fin_taxAgent',100),
+  regFee:    ls('fin_regFee',50),
+  moveFee:   ls('fin_moveFee',300),
+  etc1:      ls('fin_etc1',0),
+  jeonseDep: ls('fin_jeonseDep',90000),
+  jeonseRepair: ls('fin_jeonseRepair',500),
+  jeonseEtc: ls('fin_jeonseEtc',0),
+  newBuy:    ls('fin_newBuy',120000),
+  newRepair: ls('fin_newRepair',1000),
+  newRegFee: ls('fin_newRegFee',50),
+  newEtc:    ls('fin_newEtc',0),
+};
+
+// 반경 복원
+Object.keys(POIS).forEach(k=>{
+  const saved = ls('radius_'+k, POIS[k].r);
+  POIS[k].r = saved;
+});
+
+let map, circles={}, intersectLayer=null, aptMarkers=[];
+let allGrouped=[], tradeType='buy', areaFilter='all';
+let currentTab='map', bsExpanded=false;
+
+// ══════════════════════════════════════════════════════════
+//  MAP
+// ══════════════════════════════════════════════════════════
+function initMap(){
+  map = L.map('map',{zoomControl:true,preferCanvas:true}).setView([37.527,127.01],12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO',maxZoom:19
+  }).addTo(map);
+
+  Object.entries(POIS).forEach(([k,p])=>{
+    const icon = L.divIcon({
+      html:`<div style="width:14px;height:14px;border-radius:50%;background:${p.color};
+            border:3px solid rgba(255,255,255,.35);box-shadow:0 0 10px ${p.color}99"></div>`,
+      iconSize:[14,14],iconAnchor:[7,7],className:''
+    });
+    L.marker([p.lat,p.lng],{icon}).addTo(map)
+      .bindTooltip(`<b style="font-family:Noto Sans KR">${p.name}</b>`,{direction:'top'});
+    circles[k] = L.circle([p.lat,p.lng],{
+      radius:p.r*1000,color:p.color,weight:1.5,opacity:.6,
+      fillColor:p.color,fillOpacity:.05
+    }).addTo(map);
+  });
+  updateIntersection();
+}
+
+function updateRadius(key,val){
+  val = parseFloat(val);
+  POIS[key].r = val;
+  lss('radius_'+key, val);
+  const fmt = val.toFixed(1)+'km';
+  const el1=document.getElementById('rv'+key);
+  const el2=document.getElementById('rv'+key+'2');
+  if(el1) el1.textContent=fmt;
+  if(el2) el2.textContent=fmt;
+  // sync other slider
+  const s1=document.getElementById('r'+key);
+  const s2=document.getElementById('r'+key+'2');
+  if(s1 && parseFloat(s1.value)!==val) s1.value=val;
+  if(s2 && parseFloat(s2.value)!==val) s2.value=val;
+  circles[key].setRadius(val*1000);
+  updateIntersection();
+}
+
+function updateIntersection(){
+  if(intersectLayer){map.removeLayer(intersectLayer);intersectLayer=null;}
+  try{
+    const ps = Object.values(POIS).map(p=>turf.circle([p.lng,p.lat],p.r,{steps:64,units:'kilometers'}));
+    let inter = turf.intersect(ps[0],ps[1]);
+    if(!inter){setIntersectText('교집합 없음');return;}
+    inter = turf.intersect(inter,ps[2]);
+    if(!inter){setIntersectText('교집합 없음');return;}
+    const area = (turf.area(inter)/1e6).toFixed(2);
+    setIntersectText(area+' km²');
+    const coords = inter.geometry.coordinates[0].map(c=>[c[1],c[0]]);
+    intersectLayer = L.polygon(coords,{
+      color:'#4ade80',weight:2,opacity:.8,fillColor:'#4ade80',fillOpacity:.12
+    }).addTo(map);
+    document.getElementById('nbhd-tags').innerHTML =
+      NBHD.map(n=>`<span class="nbhd-tag">${n}</span>`).join('');
+  }catch(e){setIntersectText('계산 오류');}
+}
+function setIntersectText(t){
+  const a=document.getElementById('intersect-area');
+  const b=document.getElementById('intersect-area2');
+  if(a) a.textContent=t; if(b) b.textContent=t;
+}
+
+// ══════════════════════════════════════════════════════════
+//  REAL ESTATE API
+// ══════════════════════════════════════════════════════════
+function recentMonths(n){
+  const r=[];const d=new Date();
+  for(let i=0;i<n;i++){
+    r.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`);
+    d.setMonth(d.getMonth()-1);
+  }
+  return r;
+}
+
+const PROXY = 'https://api.allorigins.win/raw?url=';
+
+async function proxyFetch(url){
+  // 1차: 직접 시도
+  try{
+    const r = await fetch(url);
+    if(r.ok){ const t=await r.text(); if(t&&t.includes('<item>')) return t; }
+  }catch{}
+  // 2차: allorigins 프록시
+  const r2 = await fetch(PROXY + encodeURIComponent(url));
+  if(!r2.ok) throw new Error('proxy fail');
+  return r2.text();
+}
+
+async function loadApts(){
+  const mons = recentMonths(6);
+  const lawds = [11650,11680,11200,11710,11560];
+  const buyEP='https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev';
+  const rentEP='https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent';
+  let raw=[];
+  const reqs=[];
+  for(const l of lawds) for(const m of mons){
+    reqs.push({url:`${buyEP}?serviceKey=${SERVICE_KEY}&LAWD_CD=${l}&DEAL_YMD=${m}&numOfRows=1000`,type:'buy',lawd:l});
+    reqs.push({url:`${rentEP}?serviceKey=${SERVICE_KEY}&LAWD_CD=${l}&DEAL_YMD=${m}&numOfRows=1000`,type:'rent',lawd:l});
+  }
+
+  // 진행 상황 표시
+  const listEl = document.getElementById('apt-list');
+  let done=0;
+  const total=reqs.length;
+  function updateProgress(){
+    listEl.innerHTML=`<div class="load-msg"><div class="spinner"></div>실거래가 조회 중... (${done}/${total})</div>`;
+  }
+  updateProgress();
+
+  const CHUNK=6; // 프록시 부하 고려해 줄임
+  for(let i=0;i<reqs.length;i+=CHUNK){
+    const batch=reqs.slice(i,i+CHUNK);
+    const res=await Promise.allSettled(batch.map(r=>
+      proxyFetch(r.url).then(xml=>({xml,type:r.type,lawd:r.lawd}))
+        .catch(()=>({xml:'',type:r.type,lawd:r.lawd}))
+    ));
+    for(const r of res){
+      if(r.status==='fulfilled' && r.value.xml){
+        const parsed = parseXML(r.value.xml, r.value.type, r.value.lawd);
+        raw.push(...parsed);
+      }
+    }
+    done += batch.length;
+    updateProgress();
+  }
+
+  if(raw.length===0){
+    listEl.innerHTML=
+      `<div class="err-msg">⚠️ 데이터 조회 실패<br>직접 호출과 프록시 모두 응답 없음<br>잠시 후 다시 시도해주세요.</div>`;
+    return;
+  }
+  allGrouped = groupApts(raw);
+  renderMarkers();
+  renderList();
+}
+
+function parseXML(xmlStr,type,lawd){
+  const doc=new DOMParser().parseFromString(xmlStr,'text/xml');
+  const items=doc.querySelectorAll('item');
+  const out=[];
+  items.forEach(it=>{
+    const g=s=>it.querySelector(s)?.textContent?.trim()||'';
+    const name=g('aptNm')||g('아파트');
+    const dong=g('umdNm')||g('법정동');
+    const area=parseFloat(g('excluUseAr')||g('전용면적')||'0');
+    const yr=g('dealYear')||g('년');const mo=g('dealMonth')||g('월');const dy=g('dealDay')||g('일');
+    const date=`${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+    if(type==='buy'){
+      const price=parseInt((g('dealAmount')||g('거래금액')||'').replace(/,/g,''))||0;
+      if(name&&price>0) out.push({name,dong,price,area,date,type:'buy',lawd});
+    } else {
+      const price=parseInt((g('deposit')||g('보증금액')||'').replace(/,/g,''))||0;
+      if(name&&price>0) out.push({name,dong,price,area,date,type:'rent',lawd});
+    }
+  });
+  return out;
+}
+
+function groupApts(raw){
+  const m={};
+  raw.forEach(d=>{
+    const k=`${d.name}|${d.dong}|${d.type}`;
+    if(!m[k]) m[k]={name:d.name,dong:d.dong,type:d.type,lawd:d.lawd,deals:[]};
+    m[k].deals.push({price:d.price,date:d.date,area:d.area});
+  });
+  return Object.values(m).map(g=>{
+    g.deals.sort((a,b)=>b.date.localeCompare(a.date));
+    const r3=g.deals.slice(0,3);
+    g.avgPrice=Math.round(r3.reduce((s,d)=>s+d.price,0)/r3.length);
+    g.latestDate=r3[0]?.date||'';
+    g.latestArea=r3[0]?.area||0;
+    return g;
+  }).sort((a,b)=>b.avgPrice-a.avgPrice);
+}
+
+const DONG_COORDS={
+  '잠원동':{lat:37.512,lng:127.012},'반포동':{lat:37.504,lng:127.006},
+  '서초동':{lat:37.484,lng:127.012},'압구정동':{lat:37.527,lng:127.039},
+  '논현동':{lat:37.515,lng:127.033},'신사동':{lat:37.522,lng:127.020},
+  '청담동':{lat:37.523,lng:127.048},'삼성동':{lat:37.513,lng:127.062},
+  '대치동':{lat:37.494,lng:127.062},'개포동':{lat:37.481,lng:127.047},
+  '역삼동':{lat:37.500,lng:127.036},'도곡동':{lat:37.490,lng:127.043},
+  '방배동':{lat:37.480,lng:126.993},'양재동':{lat:37.464,lng:127.034},
+  '행당동':{lat:37.558,lng:127.030},'응봉동':{lat:37.551,lng:127.028},
+  '금호동':{lat:37.554,lng:127.020},'성수동':{lat:37.544,lng:127.056},
+  '왕십리동':{lat:37.561,lng:127.038},'사당동':{lat:37.475,lng:126.978},
+};
+const LAWD_COORDS={11650:{lat:37.484,lng:127.032},11680:{lat:37.515,lng:127.047},
+  11200:{lat:37.563,lng:127.037},11710:{lat:37.514,lng:127.105},11560:{lat:37.530,lng:127.124}};
+function getCoord(dong,lawd){
+  for(const[k,v] of Object.entries(DONG_COORDS)){if(dong.includes(k))return v;}
+  return LAWD_COORDS[lawd]||{lat:37.52,lng:127.03};
+}
+
+function filtered(){
+  return allGrouped.filter(g=>{
+    if(g.type!==tradeType) return false;
+    if(areaFilter!=='all'){const t=parseInt(areaFilter);if(!(g.latestArea>=t-5&&g.latestArea<=t+5))return false;}
+    return true;
+  });
+}
+
+function renderMarkers(){
+  aptMarkers.forEach(m=>map.removeLayer(m));aptMarkers=[];
+  filtered().forEach(g=>{
+    const c=getCoord(g.dong,g.lawd);
+    const jit=()=>(Math.random()-.5)*.003;
+    const col=g.type==='buy'?'#f97316':'#4ade80';
+    const icon=L.divIcon({
+      html:`<div style="width:9px;height:9px;border-radius:50%;background:${col};border:2px solid rgba(255,255,255,.4);opacity:.85"></div>`,
+      iconSize:[9,9],iconAnchor:[4.5,4.5],className:''
+    });
+    const mk=L.marker([c.lat+jit(),c.lng+jit()],{icon}).addTo(map);
+    mk.bindPopup(`
+      <div style="font-family:'Noto Sans KR',sans-serif;min-width:170px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:2px">${g.name}</div>
+        <div style="color:#7a8098;font-size:11px;margin-bottom:5px">${g.dong} · ${g.latestArea.toFixed(0)}㎡</div>
+        <div style="font-family:'DM Mono',monospace;font-size:15px;color:${col}">${fmt(g.avgPrice)}만원</div>
+        <div style="color:#7a8098;font-size:10px;margin-top:1px">최근 3건 평균 · ${g.latestDate}</div>
+        <a href="https://search.naver.com/search.naver?query=네이버부동산+${encodeURIComponent(g.name)}+${encodeURIComponent(g.dong)}"
+           target="_blank" style="display:block;margin-top:7px;color:#5bc4f0;font-size:11px">🔗 네이버부동산</a>
+      </div>
+    `,{className:'lp-wrap'});
+    mk._g=g; aptMarkers.push(mk);
+  });
+}
+
+function renderList(){
+  const list=filtered().slice(0,80);
+  const html=list.length===0
+    ?`<div class="err-msg">조건에 맞는 단지 없음</div>`
+    :list.map((g,i)=>`
+      <div class="apt-item" onclick="focusApt(${i})">
+        <div class="apt-name">${g.name}</div>
+        <div class="apt-dong">${g.dong} · ${g.latestArea.toFixed(0)}㎡</div>
+        <div class="apt-pr">
+          <span class="apt-price${g.type==='rent'?' rent':''}">${fmt(g.avgPrice)}만원</span>
+          <span class="apt-date">${g.latestDate}</span>
+        </div>
+      </div>`).join('');
+  document.getElementById('apt-list').innerHTML=html;
+  const ml=document.getElementById('apt-list-m');
+  if(ml) ml.innerHTML=html;
+  window._fl=list;
+}
+
+function focusApt(i){
+  const g=window._fl?.[i];if(!g)return;
+  const c=getCoord(g.dong,g.lawd);
+  map.setView([c.lat,c.lng],15);
+  const mk=aptMarkers.find(m=>m._g===g);
+  if(mk)mk.openPopup();
+}
+
+function setTT(t){
+  tradeType=t;
+  ['buy','rent'].forEach(x=>{
+    document.getElementById('tt-'+x)?.classList.toggle('active',x===t);
+    document.getElementById('tt-'+x+'2')?.classList.toggle('active',x===t);
+  });
+  renderMarkers();renderList();
+}
+function setFA(f){
+  areaFilter=f;
+  ['all','59','84'].forEach(x=>{
+    document.getElementById('fa-'+x)?.classList.toggle('active',x===f);
+    document.getElementById('fa-'+x+'2')?.classList.toggle('active',x===f);
+  });
+  renderMarkers();renderList();
+}
+
+// ══════════════════════════════════════════════════════════
+//  FINANCE ENGINE
+// ══════════════════════════════════════════════════════════
+function calcTax(baseWon){
+  // 누진세율 적용 (원 단위 입력 → 원 단위 반환)
+  const brackets=[
+    [14000000,.06,0],[50000000,.15,1260000],[88000000,.24,5760000],
+    [150000000,.35,15440000],[300000000,.38,19940000],[500000000,.40,25940000],
+    [1000000000,.42,35940000],[Infinity,.45,65940000]
+  ];
+  if(baseWon<=0)return 0;
+  for(const[lim,r,d] of brackets){if(baseWon<=lim)return Math.max(0,Math.round(baseWon*r-d));}
+  return 0;
+}
+
+function calcAcqTax(priceMan){
+  // 1주택 취득세
+  const p=priceMan*10000;
+  if(p<=600000000) return Math.round(priceMan*0.01);
+  if(p<=900000000){
+    const r=((p-600000000)/(300000000))*0.02+0.01;
+    return Math.round(priceMan*r);
+  }
+  return Math.round(priceMan*0.03);
+}
+
+function holdYears(){
+  try{
+    const [y,m]=fin.buyDate.split('-').map(Number);
+    const d=(new Date()-new Date(y,m-1,1))/(1000*60*60*24*365);
+    return Math.max(0,d);
+  }catch{return 0;}
+}
+
+function calcFinance(){
+  const s=fin.sellPrice, b=fin.buyPrice;
+  const gain=s-b; // 양도차익(만원)
+  const hy=holdYears();
+  const hyFloor=Math.floor(hy);
+  const hhm=Math.round((hy-hyFloor)*12);
+  const holdStr=`${hyFloor}년 ${hhm}개월`;
+
+  // 장기보유특별공제 (보유 4%/년 + 거주 4%/년, 최대 80%)
+  const holdPct=Math.min(hyFloor*4+hyFloor*4,80)/100;
+
+  // 12억 초과 과세비율
+  const taxableRatio = s>120000 ? (s-120000)/s : 0;
+  const gainForTax1 = gain*taxableRatio*0.5; // 1인분 (만원)
+  const taxBase1Man = gainForTax1*(1-holdPct); // 과세표준
+  const tax1Won=calcTax(taxBase1Man*10000); // 원
+  const tax1Man=Math.round(tax1Won/10000);
+  const taxJointMan=tax1Man*2;
+  const taxJointLocalMan=Math.round(taxJointMan*0.1);
+  const taxJointTotal=taxJointMan+taxJointLocalMan;
+
+  // 단독명의 비교
+  const gainForTaxS=gain*taxableRatio;
+  const taxBaseS=gainForTaxS*(1-holdPct);
+  const taxSingleWon=calcTax(taxBaseS*10000);
+  const taxSingleMan=Math.round(taxSingleWon/10000);
+  const taxSingleLocal=Math.round(taxSingleMan*0.1);
+  const taxSingleTotal=taxSingleMan+taxSingleLocal;
+  const taxSave=taxSingleTotal-taxJointTotal;
+
+  // 부채
+  const debtMortgage=fin.mortgage;
+  const debtTotal=fin.mortgage+fin.tesla+fin.minus1+fin.minus2;
+  // (테슬라, 마통은 매도 정산에 포함 여부는 시나리오별 – 여기선 정산에서 제외, 가용 자금에서 차감)
+  // 매도 정산: 주담대만 상환
+  const agentFee=Math.round(s*0.004);
+  const sellCosts=agentFee+fin.taxAgent+fin.regFee+fin.moveFee+fin.etc1;
+  const netProceeds=s-debtMortgage-taxJointTotal-sellCosts; // 순수령액(만원)
+
+  // 크립토 (원→만원)
+  const xrpMan=Math.round(fin.xrpQty*fin.xrpPrice/10000);
+  const btcMan=Math.round(fin.btcQty*fin.btcPrice/10000);
+  const cryptoTotal=xrpMan+btcMan;
+
+  // 기타 부채
+  const otherDebt=fin.tesla+fin.minus1+fin.minus2;
+
+  // 총 가용 자금
+  const totalAvail=netProceeds+cryptoTotal-otherDebt;
+
+  // 전세
+  const jAgent=Math.round(fin.jeonseDep*0.004);
+  const jIns=Math.round(fin.jeonseDep*0.00128);
+  const jCostTotal=jAgent+jIns+fin.jeonseRepair+fin.jeonseEtc;
+  const jRemain=totalAvail-jCostTotal; // 전세금은 보증금이라 별도 보존
+
+  // 매매
+  const acqTax=calcAcqTax(fin.newBuy);
+  const buyAgent=Math.round(fin.newBuy*0.005);
+  const buyCostTotal=acqTax+buyAgent+fin.newRegFee+fin.newRepair+fin.newEtc;
+  const buyRemain=totalAvail-fin.newBuy-buyCostTotal;
+
+  // ── DOM 업데이트 ──
+  // 양도세 상세
+  set('d-hold-str',holdStr);
+  set('d-gain',fmt(gain)+'만원');
+  set('d-taxable-ratio',(taxableRatio*100).toFixed(1)+'%');
+  set('d-hold-pct',(holdPct*100).toFixed(0)+'%');
+  set('d-gain1',fmt(Math.round(gainForTax1))+'만원');
+  set('d-taxbase1',fmt(Math.round(taxBase1Man))+'만원');
+  set('d-tax1',fmt(tax1Man)+'만원');
+  set('d-tax-joint',fmt(taxJointMan)+'만원 (×2인)');
+  set('d-tax-joint-local',fmt(taxJointLocalMan)+'만원');
+  set('d-tax-joint-total',fmt(taxJointTotal)+'만원');
+  set('d-tax-single',fmt(taxSingleMan)+'만원');
+  set('d-tax-single-local',fmt(taxSingleLocal)+'만원');
+  set('d-tax-single-total',fmt(taxSingleTotal)+'만원');
+  set('d-tax-save','공동명의 절세: '+fmt(taxSave)+'만원');
+
+  // 매도 정산
+  set('rs-sell',fmt(s)+'만원');
+  set('rs-mortgage','-'+fmt(debtMortgage)+'만원');
+  set('rs-tax','-'+fmt(taxJointTotal)+'만원');
+  set('rs-agent-fee','-'+fmt(agentFee)+'만원');
+  set('rs-tax-agent','-'+fmt(fin.taxAgent)+'만원');
+  set('rs-reg-fee','-'+fmt(fin.regFee)+'만원');
+  set('rs-move-fee','-'+fmt(fin.moveFee)+'만원');
+  set('rs-etc1','-'+fmt(fin.etc1)+'만원');
+  set('rs-net-proceeds',fmtBig(netProceeds));
+  color('rs-net-proceeds',netProceeds>=0?'var(--green)':'var(--red)');
+
+  // 총 가용 자금
+  set('av-net','+'+fmt(netProceeds)+'만원');
+  set('av-xrp','+'+fmt(xrpMan)+'만원');
+  set('av-btc','+'+fmt(btcMan)+'만원');
+  set('av-tesla','-'+fmt(fin.tesla)+'만원');
+  set('av-minus1','-'+fmt(fin.minus1)+'만원');
+  set('av-minus2','-'+fmt(fin.minus2)+'만원');
+  set('av-total',fmtBig(totalAvail));
+  color('av-total',totalAvail>=0?'var(--a)':'var(--red)');
+
+  // 시나리오 A
+  set('sc-jeonse-dep',fmt(fin.jeonseDep)+'만원');
+  set('sc-j-agent','-'+fmt(jAgent)+'만원');
+  set('sc-j-ins','-'+fmt(jIns)+'만원');
+  set('sc-j-repair','-'+fmt(fin.jeonseRepair)+'만원');
+  set('sc-j-etc','-'+fmt(fin.jeonseEtc)+'만원');
+  set('sc-j-remain',fmtBig(jRemain));
+  color('sc-j-remain',jRemain>=0?'var(--green)':'var(--red)');
+
+  // 시나리오 B
+  set('sc-maemae-price',fmt(fin.newBuy)+'만원');
+  set('sc-acq-tax','-'+fmt(acqTax)+'만원');
+  set('sc-buy-agent','-'+fmt(buyAgent)+'만원');
+  set('sc-new-reg','-'+fmt(fin.newRegFee)+'만원');
+  set('sc-new-repair','-'+fmt(fin.newRepair)+'만원');
+  set('sc-new-etc','-'+fmt(fin.newEtc)+'만원');
+  set('sc-buy-remain',fmtBig(buyRemain));
+  color('sc-buy-remain',buyRemain>=0?'var(--green)':'var(--red)');
+
+  // 슬라이더 표시값
+  set('sl-jeonse-val',fmt(fin.jeonseDep)+'만원');
+  set('sl-maemae-val',fmt(fin.newBuy)+'만원');
+
+  // 인풋 현행값 동기화 (처음 렌더 후)
+  syncInputs();
+}
+
+function syncInputs(){
+  const map2={
+    'f-sellPrice':'sellPrice','f-buyPrice':'buyPrice','f-buyDate':'buyDate',
+    'f-mortgage':'mortgage','f-tesla':'tesla','f-minus1':'minus1','f-minus2':'minus2',
+    'f-taxAgent':'taxAgent','f-regFee':'regFee','f-moveFee':'moveFee','f-etc1':'etc1',
+    'f-jeonseRepair':'jeonseRepair','f-jeonseEtc':'jeonseEtc',
+    'f-newRepair':'newRepair','f-newRegFee':'newRegFee','f-newEtc':'newEtc',
+    'xrp-qty':'xrpQty','btc-qty':'btcQty',
+  };
+  Object.entries(map2).forEach(([id,k])=>{
+    const el=document.getElementById(id);
+    if(el && document.activeElement!==el) el.value=fin[k];
+  });
+  const js=document.getElementById('sl-jeonse');
+  if(js) js.value=fin.jeonseDep;
+  const ms=document.getElementById('sl-maemae');
+  if(ms) ms.value=fin.newBuy;
+}
+
+function finInput(k,v){
+  if(k==='buyDate') fin[k]=v; else fin[k]=parseFloat(v)||0;
+  lss('fin_'+k, fin[k]);
+  calcFinance();
+}
+
+// 크립토 시세
+async function fetchCrypto(){
+  try{
+    const[xr,bt]=await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=krw').then(r=>r.json()),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=krw').then(r=>r.json())
+    ]);
+    fin.xrpPrice=xr.ripple?.krw||2074;
+    fin.btcPrice=bt.bitcoin?.krw||113388000;
+    const now=new Date();
+    const ts=`${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    set('crypto-ts','시세 기준: '+ts);
+    set('xrp-unit-p','₩'+new Intl.NumberFormat('ko').format(Math.round(fin.xrpPrice)));
+    set('btc-unit-p','₩'+new Intl.NumberFormat('ko').format(Math.round(fin.btcPrice/10000))+'만');
+  }catch{
+    set('crypto-ts','시세 조회 실패 — 기본값 사용');
+  }
+  calcFinance();
+}
+
+function pad(n){return String(n).padStart(2,'0');}
+function fmt(v){return new Intl.NumberFormat('ko').format(Math.round(v||0));}
+function fmtBig(v){
+  const abs=Math.abs(Math.round(v||0));
+  const sign=v<0?'-':'';
+  if(abs>=10000){const uk=Math.floor(abs/10000);const rem=abs%10000;
+    return sign+(rem>0?`${uk}억 ${fmt(rem)}만원`:`${uk}억원`);
+  }
+  return sign+fmt(abs)+'만원';
+}
+function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function color(id,c){const el=document.getElementById(id);if(el)el.style.color=c;}
+
+// 결과 복사
+function copyResult(){
+  const s=fin.sellPrice,b=fin.buyPrice;
+  const hy=holdYears(),hyF=Math.floor(hy);
+  const hp=Math.min(hyF*8,80)/100;
+  const tr=s>120000?(s-120000)/s:0;
+  const g1=(s-b)*tr*.5;
+  const tb1=g1*(1-hp);
+  const tax1=Math.round(calcTax(tb1*10000)/10000);
+  const tj=tax1*2;const tjl=Math.round(tj*.1);const tjt=tj+tjl;
+  const ag=Math.round(s*.004);
+  const sc=ag+fin.taxAgent+fin.regFee+fin.moveFee+fin.etc1;
+  const np=s-fin.mortgage-tjt-sc;
+  const xm=Math.round(fin.xrpQty*fin.xrpPrice/10000);
+  const bm=Math.round(fin.btcQty*fin.btcPrice/10000);
+  const od=fin.tesla+fin.minus1+fin.minus2;
+  const ta=np+xm+bm-od;
+  const ja=Math.round(fin.jeonseDep*.004);
+  const ji=Math.round(fin.jeonseDep*.00128);
+  const jc=ja+ji+fin.jeonseRepair+fin.jeonseEtc;
+  const ac=calcAcqTax(fin.newBuy);
+  const ba=Math.round(fin.newBuy*.005);
+  const bc=ac+ba+fin.newRegFee+fin.newRepair+fin.newEtc;
+  const now=new Date().toLocaleString('ko-KR');
+  const txt=
+`=== RELO 재무 시뮬레이터 결과 (${now}) ===
+
+[매도 정산]
+매도 예정가: ${fmt(fin.sellPrice)}만원
+주담대 상환: -${fmt(fin.mortgage)}만원
+양도세(공동명의): -${fmt(tjt)}만원
+중개수수료: -${fmt(ag)}만원
+세무사/등기/이사: -${fmt(fin.taxAgent+fin.regFee+fin.moveFee)}만원
+순수령액: ${fmtBig(np)}
+
+[총 가용 자금]
+순수령액: +${fmt(np)}만원
+XRP(${fmt(fin.xrpQty)}개): +${fmt(xm)}만원
+BTC(${fin.btcQty}개): +${fmt(bm)}만원
+기타 부채: -${fmt(od)}만원
+총 가용 자금: ${fmtBig(ta)}
+
+[시나리오 A — 전세 ${fmt(fin.jeonseDep)}만원]
+부대비용: -${fmt(jc)}만원
+잔여 자금: ${fmtBig(ta-jc)}
+
+[시나리오 B — 매매 ${fmt(fin.newBuy)}만원]
+매매가+부대: -${fmt(fin.newBuy+bc)}만원
+잔여 자금: ${fmtBig(ta-fin.newBuy-bc)}
+
+* 본 계산은 참고용이며 정확한 세금은 세무사 상담을 권장합니다.`;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.getElementById('copy-btn');
+    if(btn){btn.textContent='✅ 복사됨!';btn.classList.add('copied');
+      setTimeout(()=>{btn.textContent='📋 결과 복사';btn.classList.remove('copied');},2000);}
+  }).catch(()=>{alert('복사 실패 — 직접 선택하여 복사해주세요.');});
+}
+
+// ── 재무 HTML 빌드 ──
+function buildFinance(){
+  document.getElementById('finance-panel').innerHTML=`
+<div class="fgrid">
+
+<!-- 상단: 매도 정산 요약 -->
+<div class="result-card">
+  <div class="rch">📊 매도 정산</div>
+  <div class="settle-block">
+    <h4>▸ 매도가 기준 정산 내역</h4>
+    <div class="settle-row"><span class="sr-l">매도 예정가</span><span class="sr-v base" id="rs-sell">—</span></div>
+    <div class="settle-row"><span class="sr-l">주담대 상환</span><span class="sr-v deduct" id="rs-mortgage">—</span></div>
+    <div class="settle-row"><span class="sr-l">양도세 (공동명의)</span><span class="sr-v deduct" id="rs-tax">—</span></div>
+    <div class="settle-row"><span class="sr-l">공인중개사 수수료</span><span class="sr-v deduct" id="rs-agent-fee">—</span></div>
+    <div class="settle-row"><span class="sr-l">세무사 대행료</span><span class="sr-v deduct" id="rs-tax-agent">—</span></div>
+    <div class="settle-row"><span class="sr-l">등기 비용</span><span class="sr-v deduct" id="rs-reg-fee">—</span></div>
+    <div class="settle-row"><span class="sr-l">이사 비용</span><span class="sr-v deduct" id="rs-move-fee">—</span></div>
+    <div class="settle-row"><span class="sr-l">기타</span><span class="sr-v deduct" id="rs-etc1">—</span></div>
+    <div class="settle-divider"></div>
+    <div class="settle-total"><span class="st-l">순수령액</span><span class="st-v" id="rs-net-proceeds">—</span></div>
+  </div>
+</div>
+
+<!-- 중단: 총 가용 자금 -->
+<div class="result-card">
+  <div class="rch">💼 총 가용 자금</div>
+  <div class="avail-block">
+    <h4>▸ 자산 합산 / 부채 차감</h4>
+    <div class="avail-row"><span class="ar-l">순수령액</span><span class="ar-v" style="color:var(--green)" id="av-net">—</span></div>
+    <div class="avail-row"><span class="ar-l">XRP (<span id="xrp-qty-disp">${fmt(fin.xrpQty)}</span>개 × 실시간가)</span><span class="ar-v" style="color:var(--a)" id="av-xrp">—</span></div>
+    <div class="avail-row"><span class="ar-l">BTC (<span id="btc-qty-disp">${fin.btcQty}</span>개 × 실시간가)</span><span class="ar-v" style="color:var(--a)" id="av-btc">—</span></div>
+    <div class="avail-row"><span class="ar-l">테슬라 담보대출</span><span class="ar-v" style="color:var(--red)" id="av-tesla">—</span></div>
+    <div class="avail-row"><span class="ar-l">내 마이너스통장</span><span class="ar-v" style="color:var(--red)" id="av-minus1">—</span></div>
+    <div class="avail-row"><span class="ar-l">배우자 마이너스통장</span><span class="ar-v" style="color:var(--red)" id="av-minus2">—</span></div>
+    <div class="avail-divider"></div>
+    <div class="avail-total"><span class="at-l">총 가용 자금</span><span class="at-v" id="av-total">—</span></div>
+  </div>
+</div>
+
+<!-- 하단: 시나리오 비교 -->
+<div class="result-card">
+  <div class="rch">🔀 시나리오 비교</div>
+  <div class="sc-grid">
+    <div class="sc-box jeonse">
+      <h4 class="sky">🔑 시나리오 A — 전세</h4>
+      <div class="sc-row"><span class="scl">전세 보증금</span><span class="scv" style="color:var(--b)" id="sc-jeonse-dep">—</span></div>
+      <div class="sc-row"><span class="scl">중개수수료</span><span class="scv" style="color:var(--red)" id="sc-j-agent">—</span></div>
+      <div class="sc-row"><span class="scl">전세보증보험료</span><span class="scv" style="color:var(--red)" id="sc-j-ins">—</span></div>
+      <div class="sc-row"><span class="scl">수리·인테리어</span><span class="scv" style="color:var(--red)" id="sc-j-repair">—</span></div>
+      <div class="sc-row"><span class="scl">기타</span><span class="scv" style="color:var(--red)" id="sc-j-etc">—</span></div>
+      <div class="sc-sep"></div>
+      <div class="sc-result"><span class="scrl">잔여 자금</span><span class="scrv" id="sc-j-remain">—</span></div>
+    </div>
+    <div class="sc-box maemae">
+      <h4 class="gold">🏡 시나리오 B — 매매</h4>
+      <div class="sc-row"><span class="scl">매매가</span><span class="scv" style="color:var(--a)" id="sc-maemae-price">—</span></div>
+      <div class="sc-row"><span class="scl">취득세</span><span class="scv" style="color:var(--red)" id="sc-acq-tax">—</span></div>
+      <div class="sc-row"><span class="scl">중개수수료</span><span class="scv" style="color:var(--red)" id="sc-buy-agent">—</span></div>
+      <div class="sc-row"><span class="scl">등기 비용</span><span class="scv" style="color:var(--red)" id="sc-new-reg">—</span></div>
+      <div class="sc-row"><span class="scl">수리·인테리어</span><span class="scv" style="color:var(--red)" id="sc-new-repair">—</span></div>
+      <div class="sc-row"><span class="scl">기타</span><span class="scv" style="color:var(--red)" id="sc-new-etc">—</span></div>
+      <div class="sc-sep"></div>
+      <div class="sc-result"><span class="scrl">잔여 자금</span><span class="scrv" id="sc-buy-remain">—</span></div>
+    </div>
+  </div>
+  <button class="copy-btn" id="copy-btn" onclick="copyResult()">📋 결과 복사</button>
+</div>
+
+<!-- 입력 카드들 -->
+<div class="fin-row">
+  <div class="fin-card">
+    <div class="fh">🏠 현재 집 정보</div>
+    <div class="chip chip-a">매도 정보</div>
+    <div class="ir"><label>매도 예정가 (만원)</label>
+      <input class="val-in" id="f-sellPrice" value="${fin.sellPrice}" type="number" oninput="finInput('sellPrice',this.value)"></div>
+    <div class="ir"><label>취득가 (만원)</label>
+      <input class="val-in" id="f-buyPrice" value="${fin.buyPrice}" type="number" oninput="finInput('buyPrice',this.value)"></div>
+    <div class="ir"><label>취득일 (YYYY-MM)</label>
+      <input class="val-in" id="f-buyDate" value="${fin.buyDate}" oninput="finInput('buyDate',this.value)" placeholder="2020-08" style="width:130px;text-align:right"></div>
+    <div class="ir"><label>명의</label><span class="calc-v">부부 공동 (각 50%)</span></div>
+    <hr class="div">
+    <div class="chip chip-c">부채 현황</div>
+    <div class="ir"><label>주담대 잔액 (만원)</label>
+      <input class="val-in" id="f-mortgage" value="${fin.mortgage}" type="number" oninput="finInput('mortgage',this.value)"></div>
+    <div class="ir"><label>테슬라 담보대출 (만원)</label>
+      <input class="val-in" id="f-tesla" value="${fin.tesla}" type="number" oninput="finInput('tesla',this.value)"></div>
+    <div class="ir"><label>내 마이너스통장 (만원)</label>
+      <input class="val-in" id="f-minus1" value="${fin.minus1}" type="number" oninput="finInput('minus1',this.value)"></div>
+    <div class="ir"><label>배우자 마이너스통장 (만원)</label>
+      <input class="val-in" id="f-minus2" value="${fin.minus2}" type="number" oninput="finInput('minus2',this.value)"></div>
+    <hr class="div">
+    <div class="chip chip-a">매도 부대비용</div>
+    <div class="ir"><label>중개수수료 (매도가×0.4%, 자동)</label><span class="calc-v" id="rs-agent-fee2">—</span></div>
+    <div class="ir"><label>세무사 신고 대행료 (만원)</label>
+      <input class="val-in" id="f-taxAgent" value="${fin.taxAgent}" type="number" oninput="finInput('taxAgent',this.value)"></div>
+    <div class="ir"><label>등기 비용 (만원)</label>
+      <input class="val-in" id="f-regFee" value="${fin.regFee}" type="number" oninput="finInput('regFee',this.value)"></div>
+    <div class="ir"><label>이사 비용 (만원)</label>
+      <input class="val-in" id="f-moveFee" value="${fin.moveFee}" type="number" oninput="finInput('moveFee',this.value)"></div>
+    <div class="ir"><label>기타 (만원)</label>
+      <input class="val-in" id="f-etc1" value="${fin.etc1}" type="number" oninput="finInput('etc1',this.value)"></div>
+  </div>
+
+  <div class="fin-card">
+    <div class="fh">💎 크립토 자산</div>
+    <div class="crypto-status" id="crypto-ts">시세 조회 중...</div>
+    <div class="crypto-row">
+      <span class="cr-name">XRP</span>
+      <div class="cr-detail">
+        <input class="cr-qty" id="xrp-qty" value="${fin.xrpQty}" type="number" step="1000" oninput="finInput('xrpQty',this.value);set('xrp-qty-disp',fmt(parseFloat(this.value)||0))">
+        <span class="cr-unit" id="xrp-unit-p">₩—</span>
+        <span class="cr-total" id="av-xrp2">—</span>
+      </div>
+    </div>
+    <div class="crypto-row">
+      <span class="cr-name">BTC</span>
+      <div class="cr-detail">
+        <input class="cr-qty" id="btc-qty" value="${fin.btcQty}" type="number" step="0.01" oninput="finInput('btcQty',this.value);set('btc-qty-disp',this.value)">
+        <span class="cr-unit" id="btc-unit-p">₩—</span>
+        <span class="cr-total" id="av-btc2">—</span>
+      </div>
+    </div>
+    <hr class="div">
+    <div class="fh" style="margin-top:14px">🧾 양도세 (공동명의)</div>
+    <div class="tax-grid">
+      <div class="tax-box">
+        <h5>공동명의 (50%+50%)</h5>
+        <div class="ir" style="margin-bottom:4px"><label style="font-size:10px">양도세 합산</label><span class="calc-v" id="d-tax-joint" style="font-size:11px">—</span></div>
+        <div class="ir" style="margin-bottom:4px"><label style="font-size:10px">지방소득세</label><span class="calc-v" id="d-tax-joint-local" style="font-size:11px">—</span></div>
+        <div class="tot-row" style="padding-top:4px"><span class="tl" style="font-size:11px">합계</span><span class="tv" id="d-tax-joint-total" style="font-size:13px">—</span></div>
+      </div>
+      <div class="tax-box">
+        <h5>단독명의 비교</h5>
+        <div class="ir" style="margin-bottom:4px"><label style="font-size:10px">양도세 (단독)</label><span class="calc-v" id="d-tax-single" style="font-size:11px;color:var(--red)">—</span></div>
+        <div class="ir" style="margin-bottom:4px"><label style="font-size:10px">지방소득세</label><span class="calc-v" id="d-tax-single-local" style="font-size:11px;color:var(--red)">—</span></div>
+        <div class="tot-row" style="padding-top:4px"><span class="tl" style="font-size:11px">합계</span><span class="tv red" id="d-tax-single-total" style="font-size:13px">—</span></div>
+      </div>
+    </div>
+    <div class="tax-save">
+      <span class="ts-label">🎉 공동명의 절세 효과</span>
+      <span class="ts-val" id="d-tax-save">—</span>
+    </div>
+    <button class="toggle-btn" onclick="toggleTaxDetail()">▼ 양도세 계산 상세 내역 펼치기</button>
+    <div class="tax-detail" id="tax-detail-box">
+      <div class="td-row"><span class="td-l">보유기간</span><span class="td-v" id="d-hold-str">—</span></div>
+      <div class="td-row"><span class="td-l">양도차익</span><span class="td-v" id="d-gain">—</span></div>
+      <div class="td-row"><span class="td-l">과세비율 (12억 초과분/매도가)</span><span class="td-v" id="d-taxable-ratio">—</span></div>
+      <div class="td-row"><span class="td-l">장기보유특별공제율</span><span class="td-v" id="d-hold-pct">—</span></div>
+      <div class="td-row"><span class="td-l">과세대상차익 (1인, 50%)</span><span class="td-v" id="d-gain1">—</span></div>
+      <div class="td-row"><span class="td-l">과세표준 (1인)</span><span class="td-v" id="d-taxbase1">—</span></div>
+      <div class="td-row"><span class="td-l">1인 산출세액</span><span class="td-v" id="d-tax1">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 시나리오 입력 카드 -->
+<div class="fin-row">
+  <div class="fin-card">
+    <div class="fh">🔑 시나리오 A — 전세</div>
+    <div class="sl-row">
+      <label>전세 보증금</label>
+      <input type="range" id="sl-jeonse" min="50000" max="200000" step="5000" value="${fin.jeonseDep}"
+        oninput="finInput('jeonseDep',this.value)" style="accent-color:var(--b)">
+      <span class="sl-val" style="color:var(--b)" id="sl-jeonse-val">—</span>
+    </div>
+    <div class="ir"><label>중개수수료 (×0.4%, 자동)</label><span class="calc-v" id="sc-j-agent2">—</span></div>
+    <div class="ir"><label>전세보증보험료 (×0.128%, 자동)</label><span class="calc-v" id="sc-j-ins2">—</span></div>
+    <div class="ir"><label>수리·인테리어 (만원)</label>
+      <input class="val-in" id="f-jeonseRepair" value="${fin.jeonseRepair}" type="number" oninput="finInput('jeonseRepair',this.value)"></div>
+    <div class="ir"><label>기타 (만원)</label>
+      <input class="val-in" id="f-jeonseEtc" value="${fin.jeonseEtc}" type="number" oninput="finInput('jeonseEtc',this.value)"></div>
+  </div>
+
+  <div class="fin-card">
+    <div class="fh">🏡 시나리오 B — 매매</div>
+    <div class="sl-row">
+      <label>신규 매매가</label>
+      <input type="range" id="sl-maemae" min="50000" max="300000" step="5000" value="${fin.newBuy}"
+        oninput="finInput('newBuy',this.value)" style="accent-color:var(--a)">
+      <span class="sl-val" style="color:var(--a)" id="sl-maemae-val">—</span>
+    </div>
+    <div class="ir"><label>취득세 (자동 계산)</label><span class="calc-v" id="sc-acq-tax2">—</span></div>
+    <div class="ir"><label>중개수수료 (×0.5%, 자동)</label><span class="calc-v" id="sc-buy-agent2">—</span></div>
+    <div class="ir"><label>등기 비용 (만원)</label>
+      <input class="val-in" id="f-newRegFee" value="${fin.newRegFee}" type="number" oninput="finInput('newRegFee',this.value)"></div>
+    <div class="ir"><label>수리·인테리어 (만원)</label>
+      <input class="val-in" id="f-newRepair" value="${fin.newRepair}" type="number" oninput="finInput('newRepair',this.value)"></div>
+    <div class="ir"><label>기타 (만원)</label>
+      <input class="val-in" id="f-newEtc" value="${fin.newEtc}" type="number" oninput="finInput('newEtc',this.value)"></div>
+  </div>
+</div>
+
+</div><!-- /fgrid -->
+`;
+  // 계산 실행 (DOM 생성 후)
+  calcFinance();
+  fetchCrypto();
+}
+
+// calcFinance 보완: 시나리오 카드 내 자동계산값도 업데이트
+const _origCalc = calcFinance;
+calcFinance = function(){
+  _origCalc();
+  // 시나리오 카드 내 중복 표시
+  const ag=Math.round(fin.sellPrice*.004);
+  set('rs-agent-fee2',fmt(ag)+'만원');
+  const jAgent=Math.round(fin.jeonseDep*.004);
+  const jIns=Math.round(fin.jeonseDep*.00128);
+  set('sc-j-agent2','-'+fmt(jAgent)+'만원');
+  set('sc-j-ins2','-'+fmt(jIns)+'만원');
+  const acqTax=calcAcqTax(fin.newBuy);
+  const buyAgent=Math.round(fin.newBuy*.005);
+  set('sc-acq-tax2','-'+fmt(acqTax)+'만원');
+  set('sc-buy-agent2','-'+fmt(buyAgent)+'만원');
+  // 크립토 total 카드 내
+  const xm=Math.round(fin.xrpQty*fin.xrpPrice/10000);
+  const bm=Math.round(fin.btcQty*fin.btcPrice/10000);
+  set('av-xrp2',fmt(xm)+'만원');
+  set('av-btc2',fmt(bm)+'만원');
+};
+
+function toggleTaxDetail(){
+  const box=document.getElementById('tax-detail-box');
+  const btn=document.querySelector('.toggle-btn');
+  if(box.classList.toggle('open')){
+    btn.textContent='▲ 양도세 계산 상세 내역 접기';
+  } else {
+    btn.textContent='▼ 양도세 계산 상세 내역 펼치기';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  TAB
+// ══════════════════════════════════════════════════════════
+function switchTab(tab){
+  currentTab=tab;
+  const mob=window.innerWidth<=768;
+  document.getElementById('btn-map')?.classList.toggle('active',tab==='map');
+  document.getElementById('btn-finance')?.classList.toggle('active',tab==='finance');
+  document.getElementById('m-btn-map')?.classList.toggle('active',tab==='map');
+  document.getElementById('m-btn-finance')?.classList.toggle('active',tab==='finance');
+  if(tab==='map'){
+    if(!mob) document.getElementById('sidebar').style.display='';
+    else { document.getElementById('sidebar').style.display='none';document.getElementById('bottomsheet').style.display=''; }
+    document.getElementById('map').style.display='';
+    document.getElementById('finance-panel').style.display='none';
+    document.getElementById('disclaimer').style.display='none';
+    setTimeout(()=>map?.invalidateSize(),120);
+  } else {
+    document.getElementById('sidebar').style.display='none';
+    document.getElementById('map').style.display='none';
+    document.getElementById('finance-panel').style.display='block';
+    document.getElementById('disclaimer').style.display='block';
+    if(mob) document.getElementById('bottomsheet').style.display='none';
+    calcFinance();
+  }
+}
+
+function toggleBS(){
+  bsExpanded=!bsExpanded;
+  document.getElementById('bottomsheet').classList.toggle('collapsed',!bsExpanded);
+}
+
+// 초기화
+document.addEventListener('DOMContentLoaded',()=>{
+  buildFinance();
+  initMap();
+
+  // 반경 슬라이더 초기값 복원
+  Object.keys(POIS).forEach(k=>{
+    const v=POIS[k].r;
+    const s1=document.getElementById('r'+k);
+    const s2=document.getElementById('r'+k+'2');
+    if(s1){s1.value=v;document.getElementById('rv'+k).textContent=v.toFixed(1)+'km';}
+    if(s2){s2.value=v;document.getElementById('rv'+k+'2').textContent=v.toFixed(1)+'km';}
+    circles[k]?.setRadius(v*1000);
+  });
+  updateIntersection();
+
+  if(window.innerWidth<=768){
+    document.getElementById('sidebar').style.display='none';
+    document.getElementById('bottomsheet').style.display='';
+  }
+
+  loadApts();
+  // crypto & calcFinance는 buildFinance 내에서 호출됨
+});
+</script>
+</body>
+</html>
