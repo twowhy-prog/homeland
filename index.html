@@ -1121,10 +1121,18 @@ function fmt(v){return new Intl.NumberFormat('ko').format(Math.round(v||0));}
 function fmtBig(v){
   const abs=Math.abs(Math.round(v||0));
   const sign=v<0?'-':'';
-  if(abs>=10000){const uk=Math.floor(abs/10000);const rem=abs%10000;
-    return sign+(rem>0?`${uk}억 ${fmt(rem)}만원`:`${uk}억원`);
+  function remStr(rem){
+    if(rem===0) return '';
+    if(rem%1000===0) return (rem/1000)+'천만원';
+    if(rem%100===0){const ch=Math.floor(rem/1000);const bk=(rem%1000)/100;
+      return (ch>0?ch+'천':'')+bk+'백만원';}
+    return fmt(rem)+'만원';
   }
-  return sign+fmt(abs)+'만원';
+  if(abs>=10000){
+    const uk=Math.floor(abs/10000);const rem=abs%10000;
+    return sign+(rem>0?uk+'억 '+remStr(rem):uk+'억원');
+  }
+  return sign+(abs%1000===0&&abs>=1000?(abs/1000)+'천만원':fmt(abs)+'만원');
 }
 function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
 function color(id,c){const el=document.getElementById(id);if(el)el.style.color=c;}
