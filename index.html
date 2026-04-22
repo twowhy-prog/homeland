@@ -675,6 +675,7 @@ function parseXML(xmlStr,type,lawd){
     const dong=g('umdNm')||g('법정동');
     const area=parseFloat(g('excluUseAr')||g('전용면적')||'0');
     const yr=g('dealYear')||g('년');const mo=g('dealMonth')||g('월');const dy=g('dealDay')||g('일');
+    if(parseInt(yr)<2026) return;
     const date=`${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
     if(type==='buy'){
       const price=parseInt((g('dealAmount')||g('거래금액')||'').replace(/,/g,''))||0;
