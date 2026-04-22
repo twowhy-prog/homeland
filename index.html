@@ -822,12 +822,25 @@ function closeDetail(){
 async function fetchAptBasicInfo(g){
   const sec=document.getElementById('adp-basics');
   if(!sec) return;
-  try{
-    const listUrl=`https://apis.data.go.kr/1613000/AptBasisInfoService1/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
-    const xml=await proxyFetch(listUrl).catch(()=>null);
-    if(!xml) throw new Error('fetch');
 
-    const doc=new DOMParser().parseFromString(xml,'text/xml');
+  // API 버전 v1, v2 순서로 fallback 시도
+  async function tryListApi(ver){
+    const url=`https://apis.data.go.kr/1613000/AptBasisInfoService${ver}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
+    const xml=await proxyFetch(url).catch(()=>null);
+    if(!xml||!xml.includes('<item>')) return null;
+    return new DOMParser().parseFromString(xml,'text/xml');
+  }
+  async function tryInfoApi(ver,kaptCode){
+    const url=`https://apis.data.go.kr/1613000/AptBasisInfoService${ver}/getAphusBassInfo?serviceKey=${SERVICE_KEY}&kaptCode=${kaptCode}`;
+    const xml=await proxyFetch(url).catch(()=>null);
+    if(!xml||!xml.includes('<item>')) return null;
+    return new DOMParser().parseFromString(xml,'text/xml');
+  }
+
+  try{
+    const doc=await tryListApi('1') || await tryListApi('');
+    if(!doc) throw new Error('fetch');
+
     const nameNorm=g.name.replace(/\s/g,'');
     let kaptCode=null;
     for(const it of doc.querySelectorAll('item')){
@@ -839,10 +852,8 @@ async function fetchAptBasicInfo(g){
     }
     if(!kaptCode) throw new Error('notfound');
 
-    const infoUrl=`https://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusBassInfo?serviceKey=${SERVICE_KEY}&kaptCode=${kaptCode}`;
-    const xml2=await proxyFetch(infoUrl).catch(()=>null);
-    if(!xml2) throw new Error('info');
-    const doc2=new DOMParser().parseFromString(xml2,'text/xml');
+    const doc2=await tryInfoApi('1',kaptCode) || await tryInfoApi('',kaptCode);
+    if(!doc2) throw new Error('info');
     const it=doc2.querySelector('item');
     if(!it) throw new Error('noitem');
 
