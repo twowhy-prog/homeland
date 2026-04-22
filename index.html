@@ -267,6 +267,53 @@ transition:transform .3s cubic-bezier(.4,0,.2,1);
 #bottomsheet{display:none}
 }
 
+/* ── APT DETAIL PANEL ── */
+#apt-detail{
+  position:fixed;top:60px;right:-360px;width:340px;bottom:0;
+  background:var(--surface);border-left:1px solid var(--border);
+  z-index:600;transition:right .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#apt-detail.open{right:0}
+.adp-head{display:flex;align-items:flex-start;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--border);gap:10px}
+.adp-title{font-weight:700;font-size:15px;margin-bottom:4px;line-height:1.3}
+.adp-sub{font-size:11px;color:var(--muted)}
+.adp-close{background:none;border:1px solid var(--border2);color:var(--muted);
+  border-radius:5px;padding:4px 9px;cursor:pointer;font-size:11px;flex-shrink:0;
+  font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.adp-close:hover{border-color:var(--c);color:var(--c)}
+.adp-body{flex:1;overflow-y:auto;padding:14px 16px 24px}
+.adp-body::-webkit-scrollbar{width:3px}
+.adp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.adp-sec{margin-bottom:16px}
+.adp-sh{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;
+  color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.adp-kv{display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.adp-kv .ak{color:var(--muted)}
+.adp-kv .av{font-family:'DM Mono',monospace}
+.adp-deal{display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;gap:6px}
+.adp-deal .dd{color:var(--muted);font-size:11px;min-width:82px}
+.adp-deal .dp{font-family:'DM Mono',monospace;color:var(--a);flex:1;text-align:right}
+.adp-deal .dp.rent{color:var(--green)}
+.adp-deal .da{color:var(--muted2);font-size:10px;min-width:32px;text-align:right}
+.adp-link{display:block;padding:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:7px;color:var(--b);text-decoration:none;font-size:12px;text-align:center;
+  transition:all .15s;margin-top:4px}
+.adp-link:hover{border-color:var(--b);background:rgba(91,196,240,.08)}
+.adp-loading{color:var(--muted);font-size:11px;padding:8px 0;display:flex;align-items:center;gap:7px}
+.adp-loading::before{content:'';width:11px;height:11px;border:2px solid var(--border2);
+  border-top-color:var(--a);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.adp-fail{color:var(--muted2);font-size:11px;padding:6px 0}
+@media(max-width:768px){
+  #apt-detail{top:auto;right:0;left:0;width:100%;bottom:-100%;height:72vh;
+    border-left:none;border-top:1px solid var(--border2);border-radius:14px 14px 0 0;
+    transition:bottom .3s cubic-bezier(.4,0,.2,1)}
+  #apt-detail.open{bottom:56px}
+}
+
 /* 팝업 스타일 */
 .lp-wrap .leaflet-popup-content-wrapper{
 background:#161922!important;border:1px solid #252a36!important;
@@ -391,6 +438,18 @@ border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;colo
 
 <div class="disclaimer" id="disclaimer">
   ⚠️ 본 계산은 참고용이며 정확한 세금은 세무사 상담을 권장합니다. 실거래가는 국토부 공공데이터 기준이며 실제와 차이가 있을 수 있습니다.
+</div>
+
+<!-- 아파트 상세 패널 -->
+<div id="apt-detail">
+  <div class="adp-head">
+    <div style="flex:1;min-width:0">
+      <div class="adp-title" id="adp-name">—</div>
+      <div class="adp-sub" id="adp-sub">—</div>
+    </div>
+    <button class="adp-close" onclick="closeDetail()">✕ 닫기</button>
+  </div>
+  <div class="adp-body" id="adp-body"></div>
 </div>
 
 <script>
@@ -723,6 +782,97 @@ function focusApt(i){
   map.setView([c.lat,c.lng],15);
   const mk=aptMarkers.find(m=>m._g===g);
   if(mk)mk.openPopup();
+  showAptDetail(g);
+}
+
+function showAptDetail(g){
+  const panel=document.getElementById('apt-detail');
+  panel.classList.add('open');
+  document.getElementById('adp-name').textContent=g.name;
+  document.getElementById('adp-sub').textContent=`${g.dong} · 전용 ${g.latestArea.toFixed(0)}㎡`;
+
+  const col=g.type==='buy'?'var(--a)':'var(--green)';
+  const dealsHtml=g.deals.slice(0,20).map(d=>`
+    <div class="adp-deal">
+      <span class="dd">${d.date}</span>
+      <span class="dp${g.type==='rent'?' rent':''}">${fmtBig(d.price)}</span>
+      <span class="da">${d.area.toFixed(0)}㎡</span>
+    </div>`).join('');
+
+  document.getElementById('adp-body').innerHTML=`
+    <div class="adp-sec">
+      <div class="adp-sh">💰 실거래 이력 (최근 ${Math.min(g.deals.length,20)}건)</div>
+      ${dealsHtml}
+    </div>
+    <div class="adp-sec" id="adp-basics">
+      <div class="adp-sh">🏢 단지 기본 정보</div>
+      <div class="adp-loading">국토부 데이터 조회 중...</div>
+    </div>
+    <div class="adp-sec">
+      <a href="https://search.naver.com/search.naver?query=네이버부동산+${encodeURIComponent(g.name)}+${encodeURIComponent(g.dong)}" target="_blank" class="adp-link">🔗 네이버부동산 바로가기</a>
+    </div>`;
+
+  fetchAptBasicInfo(g);
+}
+
+function closeDetail(){
+  document.getElementById('apt-detail').classList.remove('open');
+}
+
+async function fetchAptBasicInfo(g){
+  const sec=document.getElementById('adp-basics');
+  if(!sec) return;
+  try{
+    const listUrl=`https://apis.data.go.kr/1613000/AptBasisInfoService1/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
+    const xml=await proxyFetch(listUrl).catch(()=>null);
+    if(!xml) throw new Error('fetch');
+
+    const doc=new DOMParser().parseFromString(xml,'text/xml');
+    const nameNorm=g.name.replace(/\s/g,'');
+    let kaptCode=null;
+    for(const it of doc.querySelectorAll('item')){
+      const n=(it.querySelector('kaptName')?.textContent||'').replace(/\s/g,'');
+      if(n===nameNorm||n.includes(nameNorm)||nameNorm.includes(n)){
+        kaptCode=it.querySelector('kaptCode')?.textContent?.trim();
+        break;
+      }
+    }
+    if(!kaptCode) throw new Error('notfound');
+
+    const infoUrl=`https://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusBassInfo?serviceKey=${SERVICE_KEY}&kaptCode=${kaptCode}`;
+    const xml2=await proxyFetch(infoUrl).catch(()=>null);
+    if(!xml2) throw new Error('info');
+    const doc2=new DOMParser().parseFromString(xml2,'text/xml');
+    const it=doc2.querySelector('item');
+    if(!it) throw new Error('noitem');
+
+    const gv=s=>it.querySelector(s)?.textContent?.trim()||'—';
+    const totalHo=parseInt(gv('kaptTotHoCnt'))||0;
+    const prkNt=parseInt(gv('kaptPrkngNtcnt'))||0;
+    const prkUnd=parseInt(gv('kaptPrkngUndCnt'))||0;
+    const totalPrk=prkNt+prkUnd;
+    const buildDate=gv('kaptBuildYear');
+    const dongCnt=gv('kaptDongCnt');
+    const heatSys=gv('kaptHeatSys');
+    const heatFuel=gv('kaptHeatFuelTp');
+
+    const rows=[
+      ['총 세대수', totalHo>0?totalHo.toLocaleString('ko')+'세대':'—'],
+      ['동 수', dongCnt!=='—'?dongCnt+'동':'—'],
+      ['사용승인일', buildDate],
+      ['주차 (지상)', prkNt>0?prkNt.toLocaleString('ko')+'대':'—'],
+      ['주차 (지하)', prkUnd>0?prkUnd.toLocaleString('ko')+'대':'—'],
+      ['세대당 주차', (totalHo>0&&totalPrk>0)?(totalPrk/totalHo).toFixed(2)+'대':'—'],
+      ['난방방식', heatSys!=='—'?heatSys:'—'],
+      ['난방연료', heatFuel!=='—'?heatFuel:'—'],
+    ].filter(([,v])=>v!=='—');
+
+    if(!sec) return;
+    sec.innerHTML=`<div class="adp-sh">🏢 단지 기본 정보</div>`
+      +rows.map(([k,v])=>`<div class="adp-kv"><span class="ak">${k}</span><span class="av">${v}</span></div>`).join('');
+  }catch(e){
+    if(sec) sec.innerHTML=`<div class="adp-sh">🏢 단지 기본 정보</div><div class="adp-fail">${e.message==='notfound'?'단지 정보를 찾을 수 없습니다':'정보 조회에 실패했습니다'}</div>`;
+  }
 }
 
 function setTT(t){
