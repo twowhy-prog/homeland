@@ -666,6 +666,20 @@ async function proxyFetch(url){
   return r2.text();
 }
 
+async function jsonApiFetch(url){
+  let text;
+  try{
+    const r = await fetch(url);
+    if(r.ok) text = await r.text();
+  }catch{}
+  if(!text){
+    const r2 = await fetch(PROXY + encodeURIComponent(url));
+    if(!r2.ok) throw new Error('proxy fail');
+    text = await r2.text();
+  }
+  try{ return JSON.parse(text); }catch{ throw new Error('parse fail'); }
+}
+
 async function loadApts(){
   const mons = recentMonths(6);
   const lawds = [11650,11680,11200,11710,11560];
@@ -919,41 +933,42 @@ async function fetchAptBasicInfo(g){
   const sec=document.getElementById('adp-basics');
   if(!sec) return;
 
-  // API 버전 v1, v2 순서로 fallback 시도
-  async function tryListApi(ver){
-    const url=`https://apis.data.go.kr/1613000/AptBasisInfoService${ver}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
-    const xml=await proxyFetch(url).catch(()=>null);
-    if(!xml||!xml.includes('<item>')) return null;
-    return new DOMParser().parseFromString(xml,'text/xml');
+  const BASE='https://apis.data.go.kr/1613000/AptBasisInfoServiceV4';
+
+  async function tryListApi(){
+    const url=`${BASE}/getAptDetailList?serviceKey=${SERVICE_KEY}&bjdong_code=${g.lawd}&numOfRows=1000&pageNo=1`;
+    const data=await jsonApiFetch(url).catch(()=>null);
+    const raw=data?.response?.body?.items?.item;
+    if(!raw) return null;
+    return Array.isArray(raw)?raw:[raw];
   }
-  async function tryInfoApi(ver,kaptCode){
-    const url=`https://apis.data.go.kr/1613000/AptBasisInfoService${ver}/getAphusBassInfo?serviceKey=${SERVICE_KEY}&kaptCode=${kaptCode}`;
-    const xml=await proxyFetch(url).catch(()=>null);
-    if(!xml||!xml.includes('<item>')) return null;
-    return new DOMParser().parseFromString(xml,'text/xml');
+  async function tryInfoApi(kaptCode){
+    const url=`${BASE}/getAphusBassInfo?serviceKey=${SERVICE_KEY}&kaptCode=${kaptCode}`;
+    const data=await jsonApiFetch(url).catch(()=>null);
+    const raw=data?.response?.body?.items?.item;
+    if(!raw) return null;
+    return Array.isArray(raw)?raw[0]:raw;
   }
 
   try{
-    const doc=await tryListApi('1') || await tryListApi('');
-    if(!doc) throw new Error('fetch');
+    const items=await tryListApi();
+    if(!items) throw new Error('fetch');
 
     const nameNorm=g.name.replace(/\s/g,'');
     let kaptCode=null;
-    for(const it of doc.querySelectorAll('item')){
-      const n=(it.querySelector('kaptName')?.textContent||'').replace(/\s/g,'');
+    for(const it of items){
+      const n=(it.kaptName||'').replace(/\s/g,'');
       if(n===nameNorm||n.includes(nameNorm)||nameNorm.includes(n)){
-        kaptCode=it.querySelector('kaptCode')?.textContent?.trim();
+        kaptCode=(it.kaptCode||'').trim();
         break;
       }
     }
     if(!kaptCode) throw new Error('notfound');
 
-    const doc2=await tryInfoApi('1',kaptCode) || await tryInfoApi('',kaptCode);
-    if(!doc2) throw new Error('info');
-    const it=doc2.querySelector('item');
-    if(!it) throw new Error('noitem');
+    const it=await tryInfoApi(kaptCode);
+    if(!it) throw new Error('info');
 
-    const gv=s=>it.querySelector(s)?.textContent?.trim()||'—';
+    const gv=s=>(it[s]?.toString()?.trim()||'—');
     const totalHo=parseInt(gv('kaptTotHoCnt'))||0;
     const prkNt=parseInt(gv('kaptPrkngNtcnt'))||0;
     const prkUnd=parseInt(gv('kaptPrkngUndCnt'))||0;
