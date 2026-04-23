@@ -74,6 +74,8 @@ font-family:‘Noto Sans KR’,sans-serif;transition:all .15s}
 .apt-pr{display:flex;justify-content:space-between;align-items:baseline}
 .apt-price{font-family:‘DM Mono’,monospace;font-size:15px;color:var(–a)}
 .apt-price.rent{color:var(–green)}
+.apt-price.over{color:var(–muted2)}
+.apt-item.over-budget .apt-name{opacity:.55}
 .apt-date{font-size:11px;color:var(–muted2)}
 .load-msg{text-align:center;padding:24px 14px;color:var(–muted);font-size:12px}
 .spinner{width:22px;height:22px;border:2px solid var(–border2);border-top-color:var(–a);
@@ -785,7 +787,6 @@ function filtered(){
     if(filters.areaMax<Infinity && g.latestArea>filters.areaMax) return false;
     if(filters.priceMin>0 && g.avgPrice<filters.priceMin) return false;
     if(filters.priceMax<Infinity && g.avgPrice>filters.priceMax) return false;
-    if(g.type==='buy' && maxBuyBudget<Infinity && g.avgPrice>maxBuyBudget) return false;
     return true;
   });
 }
@@ -858,15 +859,16 @@ function renderList(){
   const list=filtered().slice(0,80);
   const html=list.length===0
     ?`<div class="err-msg">조건에 맞는 단지 없음</div>`
-    :list.map((g,i)=>`
-      <div class="apt-item" onclick="focusApt(${i})">
+    :list.map((g,i)=>{
+      const over=g.type==='buy'&&maxBuyBudget<Infinity&&g.avgPrice>maxBuyBudget;
+      return`<div class="apt-item${over?' over-budget':''}" onclick="focusApt(${i})">
         <div class="apt-name">${g.name}</div>
         <div class="apt-dong">${g.dong} · ${g.latestArea.toFixed(0)}㎡</div>
         <div class="apt-pr">
-          <span class="apt-price${g.type==='rent'?' rent':''}">${fmtBig(g.avgPrice)}</span>
+          <span class="apt-price${g.type==='rent'?' rent':''}${over?' over':''}">${fmtBig(g.avgPrice)}</span>
           <span class="apt-date">${g.latestDate}</span>
         </div>
-      </div>`).join('');
+      </div>`;}).join('');
   document.getElementById('apt-list').innerHTML=html;
   const ml=document.getElementById('apt-list-m');
   if(ml) ml.innerHTML=html;
