@@ -2,63 +2,72 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## 프로젝트 소개
 
-**RELO** (이사 후보지 & 재무 시뮬레이터) — a client-side SPA for Seoul apartment relocation planning. Users search apartment transactions, visualize geospatial proximity to points of interest, and run financial simulations for buying/selling.
+**RELO** — 서울 이사 후보지 탐색 + 재무 시뮬레이터. 아파트 실거래가를 지도에 표시하고, 관심 지점(POI) 반경 교집합으로 후보지를 좁힌 뒤, 매도/매수 세금과 자산 시뮬레이션을 계산한다.
 
-## Running the App
+## 실행 방법
 
-No build step. Open `index.html` directly in a browser, or serve it with any static file server:
+빌드 없음. 바로 브라우저에서 열거나 간단히 서버로 띄우면 된다:
 
 ```bash
 python3 -m http.server 8080
-# then open http://localhost:8080
+# http://localhost:8080 접속
 ```
 
-There are no tests, no linter, and no package manager.
+테스트, 린터, 패키지 매니저 없음.
 
-## Architecture
+## 코드 구조
 
-The entire application lives in **`index.html`** (~1,650 lines) with three sections: `<style>` (CSS), `<body>` (HTML), and a `<script>` block (all JavaScript). There is no bundler, no framework, and no server-side code.
+모든 코드가 **`index.html`** 파일 하나에 들어 있다 (~1,650줄).  
+순서: `<style>` → `<body>` → `<script>`. 프레임워크·번들러·서버 없음.
 
-### External Libraries (loaded via CDN)
+### 외부 라이브러리 (CDN)
 
-- **Leaflet.js** v1.9.4 — interactive map
-- **Turf.js** v6.5.0 — geospatial intersection calculations
-- **Google Fonts** — Noto Sans KR, Bebas Neue, DM Mono
+- **Leaflet.js** v1.9.4 — 지도
+- **Turf.js** v6.5.0 — 원 교집합 영역 계산
+- **Google Fonts** — Noto Sans KR 등
 
-### External APIs
+### 외부 API
 
-- **Korean Government Real Estate API** (`apis.data.go.kr/1613000/RTMSDataSvcApt*`) — apartment buy (`AptTrade`) and rent (`AptRent`) transaction data, paginated XML responses
-- **CoinGecko API** — XRP and BTC spot prices, fetched through `https://api.allorigins.win/raw?url=` CORS proxy (with `corsproxy.io` as fallback)
-- API service key is hardcoded in the script as `SERVICE_KEY`
+| API | 용도 |
+|---|---|
+| `apis.data.go.kr` RTMSDataSvcAptTrade / AptRent | 아파트 매매·전월세 실거래가 (XML) |
+| CoinGecko | XRP·BTC 시세 |
+| allorigins / corsproxy.io | CORS 우회 프록시 |
 
-### Core Modules (all inside `<script>`)
+API 서비스키는 스크립트 내 `SERVICE_KEY` 상수에 하드코딩되어 있다.
 
-| Module | Key functions | Responsibility |
+### 주요 모듈 (모두 `<script>` 안)
+
+| 모듈 | 핵심 함수 | 역할 |
 |---|---|---|
-| **Map & Geospatial** | `initMap()`, `updateRadius()`, `updateIntersection()`, `renderMarkers()` | Leaflet map, 3 POI circles, Turf.js intersection polygon, apartment markers |
-| **Data Loading** | `loadApts()`, `parseXML()`, `groupApts()` | Fetches 6 months × 5 LAWD codes × 2 types (60 requests in chunks of 6), parses XML, groups by apartment+dong+type |
-| **Filtering & List** | `filtered()`, `renderList()`, `focusApt()` | Client-side filtering by price/area/intersection, renders up to 80 results |
-| **Financial Simulator** | `buildFinance()`, `calcFinance()`, `calcTax()`, `calcAcqTax()`, `fetchCrypto()` | Capital gains tax (양도세), acquisition tax (취득세), long-term holding deductions, crypto portfolio, jeonse vs. purchase scenarios |
-| **UI & Interactions** | `switchTab()`, `toggleBS()`, `showAptDetail()` | Tab switching, mobile bottom-sheet swipe gestures, apartment detail panel |
+| 지도·공간 | `initMap()` `updateRadius()` `updateIntersection()` `renderMarkers()` | Leaflet 지도, POI 3개 원, Turf 교집합 폴리곤, 아파트 마커 |
+| 데이터 로딩 | `loadApts()` `parseXML()` `groupApts()` | 6개월 × 5개 법정동코드 × 매매/전세 = 60개 요청(6개씩 청크), XML 파싱, 아파트별 그룹핑 |
+| 필터·목록 | `filtered()` `renderList()` `focusApt()` | 가격·면적·교집합 필터, 최대 80건 렌더링 |
+| 재무 시뮬레이터 | `buildFinance()` `calcFinance()` `calcTax()` `calcAcqTax()` `fetchCrypto()` | 양도세·취득세 계산, 장기보유특별공제, 코인 자산, 전세/매매 시나리오 |
+| UI | `switchTab()` `toggleBS()` `showAptDetail()` | 탭 전환, 모바일 바텀시트 스와이프, 아파트 상세 패널 |
 
-### State Management
+### 상태 관리
 
-- **`localStorage`** — persists financial inputs (`fin_*` keys) and POI radius values (`radius_*` keys) across sessions
-- **Global variables** — `allGrouped` (all loaded apartments), `filters` (active price/area range), `POIS` (POI coordinates + radius), `tradeType` (`'buy'`/`'rent'`), `fin` (finance simulator state)
+- **`localStorage`** — 재무 입력값(`fin_*`), POI 반경(`radius_*`) 저장
+- **전역 변수** — `allGrouped`(로드된 전체 아파트), `filters`(가격·면적 범위), `POIS`(POI 좌표+반경), `tradeType`(`'buy'`/`'rent'`), `fin`(재무 시뮬레이터 상태)
 
-### Key Constants
+### 주요 상수
 
 ```js
-LAWD codes (5 Seoul districts): 11650, 11680, 11200, 11710, 11560
-NBHD target neighborhoods: ['잠원동','반포동','서초동','압구정동','논현동','신사동']
-PYEONG = 3.3058  // ㎡ per pyeong (평)
-// Prices in 만원 (10,000 KRW), areas in 평
-// Only 2026+ transactions are retained after grouping
+// 법정동 코드 (5개 구)
+LAWD: [11650, 11680, 11200, 11710, 11560]
+
+// 관심 동네
+NBHD: ['잠원동','반포동','서초동','압구정동','논현동','신사동']
+
+PYEONG = 3.3058  // 1평 = 3.3058㎡
+// 가격 단위: 만원 / 면적 단위: 평
+// groupApts() 후 2026년 이후 거래만 유지
 ```
 
-### Responsive Layout
+### 레이아웃
 
-- **Desktop**: fixed sidebar (filter + list) + full-height map/finance panel side-by-side
-- **Mobile (≤768px)**: full-screen map with a swipeable bottom sheet; tab bar switches between map markers and the finance simulator
+- **데스크톱**: 좌측 사이드바(필터+목록) + 우측 지도/재무 패널
+- **모바일(≤768px)**: 전체화면 지도 + 스와이프 바텀시트, 탭으로 지도↔재무 전환
